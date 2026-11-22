@@ -20,6 +20,10 @@ MAX_ZIP_FILES = 2000
 MAX_ZIP_TOTAL = 100 * 1024 * 1024
 MAX_ZIP_ITEM = 20 * 1024 * 1024
 BACKUPS = ".wmk-backups"
+DENIED_NAMES = {".env", ".env.local", ".env.production", ".env.development", "id_rsa", "id_ed25519", "credentials", "credentials.json", "token.json", ".npmrc", ".pypirc", ".netrc", "secrets.json"}
+DENIED_SUFFIXES = {".key", ".pem", ".p12", ".pfx", ".kdbx", ".sqlite", ".db"}
+DENIED_DIRS = {".git", ".ssh", ".aws", ".azure", ".gnupg", ".wmk-backups"}
+
 
 
 def workspace_root() -> Path:
@@ -41,6 +45,11 @@ def _path(relative: str, *, existing: bool = False) -> Path:
     rel = Path(relative)
     if rel.is_absolute() or rel.drive or any(p in ("..", ".wmk-backups") for p in rel.parts):
         raise PermissionError("Caminho absoluto, pai ou backup não permitido")
+    parts = [part.lower() for part in rel.parts]
+    if any(part in DENIED_DIRS for part in parts) or rel.name.lower() in DENIED_NAMES:
+        raise PermissionError("Arquivo ou diretório sensível bloqueado")
+    if rel.suffix.lower() in DENIED_SUFFIXES or rel.name.lower().startswith(".env."):
+        raise PermissionError("Extensão ou nome sensível bloqueado")
     candidate = root / rel
     # Resolve cada componente para impedir fugas por links/junções (incluindo Windows).
     canonical = candidate.resolve(strict=existing)
@@ -66,7 +75,9 @@ def list_workspace(subdir: str = "", limit: int = 100) -> dict:
     limit = max(1, min(int(limit), 200))
     rows = []
     for item in sorted(base.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())):
-        if item.name == BACKUPS or item.is_symlink():
+        if (item.name.lower() in DENIED_DIRS or item.name.lower() in DENIED_NAMES
+                or item.name.lower().startswith(".env.") or item.suffix.lower() in DENIED_SUFFIXES
+                or item.is_symlink()):
             continue
         try:
             # Resolve também junctions no Windows.
@@ -156,6 +167,11 @@ def inspect_zip(archive: str) -> dict:
                 raise PermissionError("ZIP contém caminho inseguro")
             if ":" in rel.parts[0] or "\0" in name:
                 raise PermissionError("ZIP contém caminho inválido")
+            if (any(part.lower() in DENIED_DIRS for part in rel.parts)
+                    or rel.name.lower() in DENIED_NAMES
+                    or rel.name.lower().startswith(".env.")
+                    or rel.suffix.lower() in DENIED_SUFFIXES):
+                raise PermissionError("ZIP contém arquivo sensível ou bloqueado")
             mode = info.external_attr >> 16
             if stat.S_ISLNK(mode):
                 raise PermissionError("ZIP contém link simbólico")
