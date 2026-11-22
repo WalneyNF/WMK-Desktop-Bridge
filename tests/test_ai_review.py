@@ -61,6 +61,21 @@ class AIReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,"GROQ_API_KEY"):
             suggest_code(self.request())
 
+    @patch("code_ai._fetch")
+    def test_provider_groq_accepts_valid_model_name(self, fetch):
+        from code_ai import test_provider
+        fetch.return_value = {"choices":[{"message":{"content":"OK"},"finish_reason":"stop"}]}
+        result = test_provider({"provider":"groq", "model":"openai/gpt-oss-20b", "consent":True})
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["arquivos_lidos"],0)
+
+    @patch("code_ai._fetch")
+    def test_provider_ollama_accepts_valid_model_name(self, fetch):
+        from code_ai import test_provider
+        fetch.return_value = {"message":{"content":"OK"}}
+        result = test_provider({"provider":"ollama", "model":"qwen3:1.7b", "consent":True})
+        self.assertTrue(result["ok"])
+
     def test_missing_consent(self):
         payload=self.request()
         payload["consent"]=False
