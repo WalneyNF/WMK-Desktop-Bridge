@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WMK Central de Agentes e MCP — v0.6.0</title>
+<title>WMK Central de Agentes e MCP — v0.7.0</title>
 <style>
 :root{color-scheme:dark;font:14px Segoe UI,Arial,sans-serif;background:#0b1420;color:#dceef6}
 *{box-sizing:border-box}body{margin:0}header{padding:14px 20px;background:#182b40;border-bottom:1px solid #35546a;display:flex;align-items:center;gap:15px}h1{font-size:19px;margin:0;color:#65e2f1}
@@ -17,15 +17,23 @@ h2{font-size:15px;margin:0;color:#8be5f4}pre{white-space:pre-wrap;overflow-wrap:
 #approval button{background:#27685e}#approval pre{max-height:180px}footer{padding:8px 16px;color:#9cafbf}
 @media(max-width:800px){main{grid-template-columns:1fr}} 
 </style></head><body>
-<header><h1>WMK Central de Agentes e MCP</h1><span class="small">v0.6.0 • ambiente local • aprovação humana</span><button style="margin-left:auto" onclick="location.href='/'">Voltar</button></header>
+<header><h1>WMK Central de Agentes e MCP</h1><span class="small">v0.7.0 • ambiente local • aprovação humana</span><button style="margin-left:auto" onclick="location.href='/'">Voltar</button></header>
 <main>
 <section><h2>🤖 Agentes cadastrados</h2><div id="agents-list">Carregando...</div>
+<h2>📚 WMK Skills Manager</h2>
+<label>Skill cadastrada <select id="skill-select"></select></label>
+<label>Nome <input id="skill-name" maxlength="70" placeholder="Revisor JavaScript"></label>
+<label>Descrição <input id="skill-desc" maxlength="300"></label>
+<label>Instruções da skill (somente texto) <textarea id="skill-instructions" rows="6" maxlength="6000"></textarea></label>
+<div class="row"><button id="skill-new">Nova skill</button><button id="skill-save">Salvar skill</button><button onclick="location.href='/media'">Laboratório de imagens e 3D</button></div>
+<pre id="skill-result">Skills não executam comandos e não ampliam permissões.</pre>
 <h2>➕ Cadastrar novo agente</h2>
 <label>Nome <input id="name" placeholder="Especialista em Blender" maxlength="60"></label>
 <label>Provedor <select id="provider"><option value="ollama">Ollama local</option><option value="groq">Groq</option><option value="openai">OpenAI API</option><option value="gemini">Gemini API</option></select></label>
 <label>Modelo <input id="model" value="qwen3:1.7b" maxlength="100"></label>
 <label>Instruções do agente <textarea id="system" rows="3" maxlength="2500" placeholder="Explique as modificações de maneira simples."></textarea></label>
 <div class="caps"><label><input id="cap-list" type="checkbox" checked> Consultar cena Blender</label><label><input id="cap-create" type="checkbox"> Criar primitivas Blender</label><label><input id="cap-files" type="checkbox"> Ler workspace</label></div>
+<label>Skills do agente <select id="agent-skills" multiple size="5" title="Ctrl+clique para selecionar várias skills"></select></label>
 <button id="create-agent">Cadastrar agente</button><div id="register-result" class="small"></div>
 </section>
 <section><h2>🔌 Conexões e provedores</h2><div id="providers" class="small">Consultando...</div>
@@ -46,7 +54,19 @@ h2{font-size:15px;margin:0;color:#8be5f4}pre{white-space:pre-wrap;overflow-wrap:
 <h2>🛡️ Política MCP</h2><p class="small">O WMK expõe ferramentas Blender de consulta ao seu servidor MCP. A criação por IA exige aprovação nesta interface; nenhum MCP externo recebe acesso irrestrito. Cadastro de servidores MCP externos e execução de suas ferramentas exigem uma etapa futura com isolamento e revisão.</p>
 </section></main><footer>Walney Moreira Klein — walneyk@hotmail.com · Licença MIT</footer>
 <script>
-let agents=[], active='', pending=null;
+let agents=[], active='', pending=null, skills=[];
+async function loadSkills(){
+ skills=await api('/api/skills');
+ const a=$('agent-skills'),b=$('skill-select');a.replaceChildren();b.replaceChildren();
+ skills.forEach(k=>{
+ const opt=document.createElement('option');opt.value=k.id;opt.textContent=k.nome;a.append(opt);
+ const opt2=document.createElement('option');opt2.value=k.id;opt2.textContent=k.nome;b.append(opt2);
+ });
+ if(skills.length)showSkill(skills[0].id);
+}
+function showSkill(id){const k=skills.find(x=>x.id===id);if(!k)return;
+ $('skill-name').value=k.nome;$('skill-desc').value=k.descricao;$('skill-instructions').value=k.instrucoes;}
+
 const $=id=>document.getElementById(id);
 async function api(path,body){const opts=body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)};
 const response=await fetch(path,opts);const data=await response.json();if(!response.ok)throw Error(data.erro||data.error||response.status);return data;}
@@ -57,15 +77,19 @@ try{
  agents.forEach(a=>{const btn=document.createElement('button');btn.className='agent'+(a.id===active?' selected':'');btn.textContent=a.nome;const small=document.createElement('small');small.textContent=a.provider+' · '+a.model+' · '+a.capabilities.join(', ');btn.append(small);btn.onclick=()=>{active=a.id;$('selected-agent').value=a.id;refreshCards();};container.append(btn);
 const option=document.createElement('option');option.value=a.id;option.textContent=a.nome;$('selected-agent').append(option);});
  if(!active&&agents.length)active=agents[0].id;$('selected-agent').value=active;refreshCards();
+ await loadSkills();
  const p=await api('/api/providers');text('providers',p.map(x=>x.id+': '+(x.configurado?'configurado':'chave não definida')+' ('+x.variavel+')').join('\n'));
 }catch(e){text('register-result','Erro ao carregar: '+e.message)}
 }
 function refreshCards(){document.querySelectorAll('.agent').forEach((e,i)=>e.classList.toggle('selected',agents[i]?.id===active));}
 $('selected-agent').onchange=e=>{active=e.target.value;refreshCards()};
+$('skill-select').onchange=()=>showSkill($('skill-select').value);
+$('skill-new').onclick=()=>{$('skill-name').value='';$('skill-desc').value='';$('skill-instructions').value='';$('skill-name').focus()};
+$('skill-save').onclick=async()=>{try{const k=await api('/api/skills/save',{nome:$('skill-name').value,descricao:$('skill-desc').value,instrucoes:$('skill-instructions').value});text('skill-result','Skill salva: '+k.nome+' — não concede permissões.');await loadSkills();$('skill-select').value=k.id;showSkill(k.id)}catch(e){text('skill-result','Erro: '+e.message)}};
 $('provider').onchange=()=>{$('model').value={ollama:'qwen3:1.7b',groq:'openai/gpt-oss-20b',openai:'gpt-4.1-mini',gemini:'gemini-2.5-flash'}[$('provider').value]};
 $('create-agent').onclick=async()=>{try{
 const caps=[];if($('cap-list').checked)caps.push('blender_list');if($('cap-create').checked)caps.push('blender_create');if($('cap-files').checked)caps.push('workspace_read');
-const obj=await api('/api/agents/register',{nome:$('name').value,provider:$('provider').value,model:$('model').value,system:$('system').value,capabilities:caps});
+const obj=await api('/api/agents/register',{nome:$('name').value,provider:$('provider').value,model:$('model').value,system:$('system').value,capabilities:caps,skills:Array.from($("agent-skills").selectedOptions).map(x=>x.value)});
 active=obj.id;text('register-result','Agente cadastrado: '+obj.nome);await refresh();
 }catch(e){text('register-result','Falha: '+e.message)}};
 $('check-blender').onclick=async()=>{try{text('blender-status',await api('/api/blender/status'))}catch(e){text('blender-status',e.message)}};
