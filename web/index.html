@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WMK Desktop Bridge 0.2.1</title>
+<title>WMK Desktop Bridge 0.3.0</title>
 <style>
 :root{color-scheme:dark;font-family:Segoe UI,Arial,sans-serif;background:#0c111b;color:#dfedfa}
 *{box-sizing:border-box}body{margin:0;overflow:hidden}header{height:64px;background:#111c2d;display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid #29465b}
@@ -11,21 +11,22 @@ h1{font-size:19px;margin:0;color:#4bd9ec}small{color:#95aec2}button{background:#
 .panel{position:absolute;background:#152234;border:1px solid #2c4b61;border-radius:10px;box-shadow:0 12px 35px #0008;min-width:260px;min-height:160px;resize:both;overflow:auto}
 .panel .bar{padding:9px 12px;background:#20364e;display:flex;justify-content:space-between;cursor:move;user-select:none;position:sticky;top:0;z-index:1;font-weight:600;color:#80e9f4}
 .panel .content{padding:12px;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}
-#disks{top:22px;left:22px;width:430px;height:260px}#home{top:22px;left:475px;width:420px;height:330px}#ollama{top:300px;left:22px;width:430px;height:245px}#about{top:375px;left:475px;width:420px;height:180px}
+#disks{top:22px;left:22px;width:430px;height:260px}#home{top:22px;left:475px;width:420px;height:330px}#ollama{top:300px;left:22px;width:430px;height:245px}#about{top:375px;left:475px;width:420px;height:180px}#hardware{top:575px;left:22px;width:680px;height:320px}
 pre{font:12px Consolas,monospace;white-space:pre-wrap;margin:0} .disk{margin:12px 0}.track{height:11px;background:#314457;border-radius:6px;overflow:hidden;margin:5px 0}.fill{height:100%;background:linear-gradient(90deg,#24c5da,#f6a34c)}
 footer{height:30px;background:#111c2d;color:#8daec3;padding:6px 18px;font-size:12px}
 @media(max-width:850px){body{overflow:auto}#workspace{height:auto;padding:12px;display:grid;gap:12px}.panel,#disks,#home,#ollama,#about{position:relative;top:auto;left:auto;width:100%;height:250px}}
 </style></head>
 <body>
-<header><div><h1>WMK Desktop Bridge <small>v0.2.1</small></h1><small>Diagnóstico local • somente leitura • painéis móveis</small></div><div><button id="refresh">Atualizar</button> <button id="reset">Restaurar layout</button></div></header>
+<header><div><h1>WMK Desktop Bridge <small>v0.3.0</small></h1><small>Diagnóstico local • somente leitura • painéis móveis</small></div><div><button id="refresh">Atualizar</button> <button id="reset">Restaurar layout</button></div></header>
 <main id="workspace">
 <section class="panel" id="disks"><div class="bar">💽 Discos <span>☰</span></div><div class="content">Carregando...</div></section>
 <section class="panel" id="home"><div class="bar">📁 Pasta do usuário <span>☰</span></div><div class="content">Carregando...</div></section>
 <section class="panel" id="ollama"><div class="bar">🤖 Ollama <span>☰</span></div><div class="content">Carregando...</div></section>
+<section class="panel" id="hardware"><div class="bar">🖥️ Hardware e sistema <span>☰</span></div><div class="content">Carregando inventário...</div></section>
 <section class="panel" id="about"><div class="bar">🛡️ Segurança e estado <span>☰</span></div><div class="content">Carregando...</div></section>
 </main><footer>Walney Moreira Klein — walneyk@hotmail.com · WMK Desktop Bridge</footer>
 <script>
-const ids=['disks','home','ollama','about'];const key='wmk-desktop-layout-v1';
+const ids=['disks','home','ollama','about','hardware'];const key='wmk-desktop-layout-v1';
 function showOllama(d){
  if(d.status==='online'&&d.origem==='api'){
    const models=d.modelos||[];
@@ -37,11 +38,18 @@ function showOllama(d){
    (d.detalhe_api?'\nAPI: '+d.detalhe_api:'')+
    (d.sugestao?'\n'+d.sugestao:'');
 }
+function showHardware(d){
+ if(d.status!=='ok')return '⚠️ '+(d.erro||'Inventário indisponível');
+ const groups=d.categorias||{};
+ const sections=[['processador','🧠 Processador'],['memoria','💾 Memória e Windows'],['modulos_ram','🧩 Módulos RAM'],['video','🎮 Placas de vídeo'],['rede','🌐 Adaptadores de rede'],['placa_mae','🔧 Placa-mãe'],['discos_fisicos','💽 Discos físicos']];
+ const fields={Name:'Nome',Manufacturer:'Fabricante',NumberOfCores:'Núcleos',NumberOfLogicalProcessors:'Threads',MaxClockSpeed:'Clock máximo (MHz)',LoadPercentage:'Uso CPU (%)',TotalVisibleMemorySize:'RAM total (KB)',FreePhysicalMemory:'RAM livre (KB)',Caption:'Windows',Version:'Versão',OSArchitecture:'Arquitetura',Capacity:'Capacidade (bytes)',Speed:'Velocidade (MHz)',ConfiguredClockSpeed:'Clock configurado (MHz)',PartNumber:'Modelo',DeviceLocator:'Slot',AdapterRAM:'VRAM reportada (bytes)',DriverVersion:'Driver',VideoProcessor:'Processador gráfico',CurrentHorizontalResolution:'Resolução largura',CurrentVerticalResolution:'Resolução altura',NetConnectionStatus:'Estado de conexão',MACAddress:'MAC (sensível)',PhysicalAdapter:'Adaptador físico',NetEnabled:'Habilitado',NetConnectionID:'Conexão',Product:'Produto',Size:'Tamanho (bytes)',InterfaceType:'Interface',MediaType:'Mídia'};
+ return sections.map(([key,title])=>{const group=groups[key]||{},items=group.dados||[];return title+'\n'+(group.erro?'Erro: '+group.erro+'\n':'')+(items.length?items.map((item,i)=>'  '+(items.length>1?'#'+(i+1)+'\n  ':'')+Object.entries(item).filter(([k,v])=>v!==null&&v!==''&&v!==undefined).map(([k,v])=>'  '+(fields[k]||k)+': '+(typeof v==='boolean'?(v?'Sim':'Não'):v)).join('\n')).join('\n'):'  Nenhum registro')}).join('\n\n');
+}
 function put(id,text){document.querySelector('#'+id+' .content').replaceChildren(document.createTextNode(text));}
 async function fetchJSON(url){const r=await fetch(url,{cache:'no-store'});const j=await r.json();if(!r.ok)throw Error(j.erro||r.status);return j}
 async function load(){
  try{let data=await fetchJSON('/api/drives');const target=document.querySelector('#disks .content');target.replaceChildren();data.forEach(d=>{let wrap=document.createElement('div');wrap.className='disk';let label=document.createElement('div');label.textContent=d.unidade+'  —  '+d.livre_gb+' GB livres / '+d.total_gb+' GB';let track=document.createElement('div');track.className='track';let fill=document.createElement('div');fill.className='fill';fill.style.width=Math.min(100,100*d.usado_gb/d.total_gb)+'%';track.append(fill);wrap.append(label,track);target.append(wrap)})}catch(e){put('disks','Erro: '+e.message)}
- for(const [id,url,format] of [['home','/api/home',d=>d.map(x=>(x.tipo==='pasta'?'📁 ':'📄 ')+x.nome).join('\n')],['ollama','/api/ollama',showOllama],['about','/api/status',d=>'Versão: '+d.versao+'\nModo: '+d.modo+'\nRaízes autorizadas:\n'+d.raizes_autorizadas.join('\n')]]){try{put(id,id==='ollama'?'Consultando API local do Ollama...': 'Carregando...');put(id,format(await fetchJSON(url)))}catch(e){put(id,'Erro: '+e.message)}}
+ for(const [id,url,format] of [['home','/api/home',d=>d.map(x=>(x.tipo==='pasta'?'📁 ':'📄 ')+x.nome).join('\n')],['ollama','/api/ollama',showOllama],['hardware','/api/hardware',showHardware],['about','/api/status',d=>'Versão: '+d.versao+'\nModo: '+d.modo+'\nRaízes autorizadas:\n'+d.raizes_autorizadas.join('\n')]]){try{put(id,id==='ollama'?'Consultando API local do Ollama...': 'Carregando...');put(id,format(await fetchJSON(url)))}catch(e){put(id,'Erro: '+e.message)}}
 }
 function save(){const state={};ids.forEach(id=>{let e=document.getElementById(id);state[id]={top:e.style.top,left:e.style.left,width:e.style.width,height:e.style.height}});localStorage.setItem(key,JSON.stringify(state))}
 try{const state=JSON.parse(localStorage.getItem(key)||'{}');ids.forEach(id=>{let e=document.getElementById(id);Object.assign(e.style,state[id]||{})})}catch(e){}
