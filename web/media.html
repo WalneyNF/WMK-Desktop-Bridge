@@ -1,0 +1,27 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WMK Media Lab v0.7.0</title>
+<style>:root{color-scheme:dark;font-family:Segoe UI,Arial;background:#0b1420;color:#e7f4fb}*{box-sizing:border-box}body{margin:0}header{padding:14px;background:#162b40;display:flex;gap:12px;align-items:center;border-bottom:1px solid #355c76}h1{font-size:19px;color:#79e5ee;margin:0}main{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px}section{border:1px solid #34536a;border-radius:8px;background:#122538;padding:14px;display:grid;align-content:start;gap:10px}input,textarea,select{padding:9px;background:#0b1a29;color:#e9f6fd;border:1px solid #3b607a;border-radius:5px;width:100%;font:inherit}button{background:#194b63;color:#ecf9ff;border:1px solid #397995;border-radius:5px;padding:9px;cursor:pointer}label{display:grid;gap:6px}h2{font-size:16px;margin:0;color:#80d9ea}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 Consolas;background:#07121e;padding:12px;max-height:45vh;overflow:auto}.note{font-size:12px;color:#a6c1d1}footer{padding:12px;color:#8eb7c4}@media(max-width:850px){main{grid-template-columns:1fr}}</style></head>
+<body><header><h1>WMK Media Lab</h1><span>v0.7.0 • análise local</span><button style="margin-left:auto" onclick="location.href='/agents'">Agentes e Skills</button></header>
+<main><section><h2>🖼️ Análise de imagem com Ollama</h2>
+<p class="note">Selecione o caminho relativo de uma imagem PNG/JPEG/WebP já presente na pasta autorizada. Limite de 6 MB. O modelo precisa suportar visão.</p>
+<label>Arquivo no workspace<input id="img-path" placeholder="referencias/helicoptero.png"></label>
+<label>Modelo multimodal Ollama<input id="img-model" value="qwen3-vl:2b-instruct"></label>
+<label>O que analisar?<textarea id="img-prompt" rows="4">Descreva os objetos visíveis, formas, materiais, cores, orientação e limitações desta imagem. Não invente medidas.</textarea></label>
+<label><span><input id="img-consent" type="checkbox" style="width:auto"> Autorizo enviar esta imagem para o Ollama local nesta consulta.</span></label>
+<button id="img-info">Consultar metadados</button><button id="img-vision">Analisar imagem com IA local</button>
+<pre id="img-result">Nenhuma análise iniciada.</pre></section>
+<section><h2>🧊 Inspeção de modelos 3D</h2><p class="note">Analisa estrutura de arquivos OBJ, glTF JSON e GLB. Não renderiza, converte ou executa scripts. Tamanho máximo: 30 MB.</p>
+<label>Arquivo 3D relativo<input id="model-path" placeholder="modelos/helicoptero.glb"></label>
+<button id="model-info">Inspecionar estrutura do modelo</button>
+<pre id="model-result">Malhas, nós, materiais, cenas, animações e nomes serão exibidos aqui.</pre>
+<h2>🛡️ Política de proteção</h2>
+<p class="note">As duas funções exigem WMK_WORKSPACE configurado. Bloqueiam caminhos absolutos, caminhos com .. e pontos de junção que escapem da pasta. O analisador 3D não carrega buffers externos e não modifica arquivos. A IA visual é enviada somente à API local do Ollama em 127.0.0.1:11434.</p>
+<button onclick="location.href='/editor'">Abrir Monaco Code Studio</button></section></main>
+<footer>Walney Moreira Klein — walneyk@hotmail.com · Licença MIT</footer>
+<script>
+const $=id=>document.getElementById(id);
+async function post(url,body){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.erro||r.status);return d}
+async function run(button,target,call){button.disabled=true;$(target).textContent='Processando...';try{$(target).textContent=JSON.stringify(await call(),null,2)}catch(e){$(target).textContent='Falha: '+e.message}finally{button.disabled=false}}
+$('img-info').onclick=()=>run($('img-info'),'img-result',()=>post('/api/media/info',{kind:'image',path:$('img-path').value.trim()}));
+$('model-info').onclick=()=>run($('model-info'),'model-result',()=>post('/api/media/info',{kind:'model',path:$('model-path').value.trim()}));
+$('img-vision').onclick=()=>{if(!$('img-consent').checked)return $('img-result').textContent='Marque a autorização antes de consultar o modelo.';if(!confirm('Enviar imagem ao Ollama local?'))return;run($('img-vision'),'img-result',()=>post('/api/media/vision',{path:$('img-path').value.trim(),prompt:$('img-prompt').value,model:$('img-model').value.trim(),consent:true}));$('img-consent').checked=false};
+</script></body></html>
