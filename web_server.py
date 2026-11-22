@@ -16,6 +16,7 @@ from blender_client import status as blender_status, list_objects as blender_obj
 from skills_manager import list_skills, save_skill
 from media_lab import image_info, vision_ollama, model_info
 from mcp_approvals import list_pending, get_proposal, approve, reject
+from coding_agent import coding_task
 
 HOST, PORT = "127.0.0.1", 8767
 DASHBOARD = Path(__file__).parent / "web" / "index.html"
@@ -110,7 +111,7 @@ class Handler(BaseHTTPRequestHandler):
         if host not in (f"127.0.0.1:{PORT}", f"localhost:{PORT}") or origin not in allowed:
             return self.reply({"erro": "Origem não autorizada"}, 403)
         route = urlparse(self.path).path
-        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest", "/api/agents/register", "/api/agents/propose", "/api/agents/ask", "/api/blender/approve", "/api/skills/save", "/api/media/info", "/api/media/vision", "/api/agents/chat", "/api/mcp/approve", "/api/mcp/reject"):
+        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest", "/api/agents/register", "/api/agents/propose", "/api/agents/ask", "/api/blender/approve", "/api/skills/save", "/api/media/info", "/api/media/vision", "/api/agents/chat", "/api/mcp/approve", "/api/mcp/reject", "/api/coding/task"):
             return self.reply({"erro": "Rota desconhecida"}, 404)
         if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
             return self.reply({"erro": "Content-Type deve ser application/json"}, 415)
@@ -121,6 +122,8 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(size))
             if not isinstance(data, dict):
                 return self.reply({"erro": "JSON inválido"}, 400)
+            if route == "/api/coding/task":
+                return self.reply(coding_task(data.get("agent_id"), data.get("task"), data.get("consent")))
             if route == "/api/mcp/approve":
                 return self.reply(approve(data.get("id"),data.get("sha256")))
             if route == "/api/mcp/reject":
