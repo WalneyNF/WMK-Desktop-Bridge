@@ -24,7 +24,8 @@
     <label style="font-size:12px"><input type="checkbox" id="ai-consent"> Autorizo enviar o texto do editor ao provedor escolhido nesta consulta.</label>
     <button type="button" id="ai-ask">Analisar arquivo com IA</button>
     <button type="button" id="ai-compare" disabled>Comparar sugestão lado a lado</button>
-    <button type="button" id="ai-check">Verificar Groq / Ollama</button>
+    <button type="button" id="ai-check">Verificar configuração</button>
+    <button type="button" id="ai-ping">Testar resposta do provedor (sem arquivo)</button>
     <div id="ai-provider-state" class="muted">Clique em Verificar antes de testar uma análise.</div>
     <div id="ai-state" class="muted" role="status">A IA só recebe o conteúdo do editor; não recebe ferramentas de exclusão.</div>`;
   const title = aside.querySelector('.panel-title');
@@ -151,7 +152,26 @@
     feedback('IA não salvou o arquivo. Revise o diff e confirme manualmente.');
     proposal = null; $('ai-compare').disabled = true;
   }
+  async function pingProvider(){
+    const provider=$('ai-provider').value, model=$('ai-model').value.trim();
+    if(!model)return setState('Informe o nome do modelo.');
+    if(!confirm('Enviar apenas a frase de teste ao '+provider+' / '+model+'? Nenhum arquivo será enviado.'))return;
+    $('ai-ping').disabled=true;
+    setState('Testando resposta do '+provider+' ...');
+    try{
+      const response=await fetch('/api/ai/test',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({provider,model,consent:true})
+      });
+      const data=await response.json();
+      if(!response.ok)throw Error(data.erro || 'HTTP '+response.status);
+      setState('Conexão FUNCIONOU: '+data.provedor+' / '+data.modelo+' respondeu: '+data.resposta);
+    }catch(e){
+      setState('Teste falhou: '+e.message);
+    }finally{$('ai-ping').disabled=false;}
+  }
   $('ai-ask').onclick = ask;
+  $('ai-ping').onclick = pingProvider;
   $('ai-check').onclick = checkProvider;
   checkProvider();
   $('ai-compare').onclick = compare;
