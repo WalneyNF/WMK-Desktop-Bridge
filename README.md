@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.5.1 (protótipo local, com editor manual protegido)** · Interface em português do Brasil.
+> Versão: **0.5.2 (protótipo local, com editor manual protegido)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -24,6 +24,7 @@ Criar uma alternativa independente para diagnósticos locais de disco e arquivos
 | Servidor MCP local via stdio | ✅ |
 | Pasta única autorizada para agentes (somente leitura) | ✅ |
 | Monaco Code Studio, diff, hash e backup para edição manual | ✅ Protótipo |
+| IA integrada ao Monaco com Groq/Ollama e propostas lado a lado | ✅ Protótipo, sujeito a testes Windows |
 | Painel HTML local com painéis móveis, redimensionáveis e layout persistente | ✅ |
 | Executar diagnósticos PowerShell fixos por IA (Groq/MCP) | ✅ Com restrições |
 | Executar PowerShell arbitrário pela IA | ❌ Não permitido |
@@ -202,6 +203,16 @@ py web_server.py
 
 **Não há botão de alternância em tempo real:** mudar o ambiente do servidor requer reinicialização, para evitar reconfiguração acidental das permissões.
 
+## IA no Code Studio — v0.5.2
+
+O editor Monaco agora possui um painel de assistência com **Groq** (API com `GROQ_API_KEY`) e **Ollama** local (`127.0.0.1:11434`). Depois de abrir um arquivo autorizado, é possível pedir: **Explicar**, **Revisar**, **Corrigir**, **Refatorar** e **Gerar** código. A interface requer consentimento para cada consulta.
+
+Nas ações com código proposto, o usuário pode **comparar original e sugestão lado a lado**, enviar a sugestão para a memória do editor e, separadamente, clicar em **Salvar após revisão**. O modelo **não possui ferramentas para gravar ou excluir arquivos**. O backend valida os caminhos, os limites de tamanho e nomes sensíveis, e aplica detecção básica de credenciais — que não é infalível.
+
+**O código enviado à Groq pode sair do computador**; somente use arquivos para os quais possui autorização. A configuração da chave deve ser feita no ambiente do servidor Python, nunca dentro do HTML ou no repositório. O modo protegido exige `WMK_WORKSPACE`.
+
+Para os passos completos e problemas conhecidos: **[Manual do Assistente de Código](manuais/ASSISTENTE_CODIGO_IA.md)**.
+
 ## Segurança
 
 - Todas as ferramentas são **somente leitura**.
@@ -220,6 +231,7 @@ WMK-Desktop-Bridge/
 ├── security_policy.py       # perfis de segurança
 ├── workspace.py             # isolamento lógico de arquivos de projetos
 ├── editor_backend.py        # leitura, diff, hash e gravação humana
+├── code_ai.py               # adaptadores Groq/Ollama sem escrita
 ├── agente_groq.py            # agente experimental Groq com tool calling
 ├── powershell_tools.py       # executor de diagnósticos PowerShell permitidos
 ├── hardware.py              # inventário de hardware via CIM
@@ -227,6 +239,7 @@ WMK-Desktop-Bridge/
 ├── web_server.py            # API/painel local HTTP
 ├── web/index.html           # painel com janelas móveis
 ├── web/editor.html          # Monaco Code Studio
+├── web/editor_ai.js         # interface das sugestões e comparação
 ├── iniciar-painel.bat
 ├── iniciar-mcp.bat
 ├── requirements.txt
@@ -241,6 +254,7 @@ WMK-Desktop-Bridge/
 - **v0.3.1:** inventário e exportação TXT/JSON implementados, exemplo de agente Groq incluído; análise de caches e testes automatizados ainda pendentes.
 - **v0.4.0:** diagnósticos PowerShell com lista fechada, confirmações no painel e Groq, logs e timeout; operações de escrita continuam pendentes.
 - **v0.5.0:** Monaco Code Studio e pasta única implementados como protótipo; aprovação centralizada segura para agentes e testes em Windows ainda pendentes.
+- **v0.5.2:** assistente Groq/Ollama no Monaco, propostas e comparação lado a lado (testes de campo ainda necessários).
 - **v0.6:** agente remoto autenticado, transporte seguro e integração documentada com clientes compatíveis.
 
 ## Contribuições
