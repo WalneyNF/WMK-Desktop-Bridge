@@ -1,16 +1,19 @@
-"""Painel local na porta 8767. Não oferece terminal nem exclusão."""
+"""Painel local na porta 8767. Editor humano restrito, sem exclusão ou shell livre."""
 import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 from bridge import diagnostic, drives, folder_sizes, list_folder, ollama_models
 from hardware import hardware_info
 from powershell_tools import catalog, run_action
+from workspace import workspace_status
+from editor_backend import list_files, open_file, proposal, save_file
 
 HOST, PORT = "127.0.0.1", 8767
 DASHBOARD = Path(__file__).parent / "web" / "index.html"
+EDITOR = Path(__file__).parent / "web" / "editor.html"
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -23,16 +26,28 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply({"erro": "Origem não autorizada"}, 403)
         route = urlparse(self.path).path
         try:
-            if route == "/":
-                data = DASHBOARD.read_bytes()
+            if route in ("/", "/editor"):
+                is_editor = route == "/editor"
+                data = (EDITOR if is_editor else DASHBOARD).read_bytes()
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Cache-Control", "no-store")
                 self.send_header("X-Content-Type-Options", "nosniff")
-                self.send_header("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; frame-ancestors 'none'")
+                if is_editor:
+                    self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' data: https://cdn.jsdelivr.net; worker-src 'self' blob:; connect-src 'self' https://cdn.jsdelivr.net; object-src 'none'; frame-ancestors 'none'")
+                else:
+                    self.send_header("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; frame-ancestors 'none'")
                 self.end_headers()
                 self.wfile.write(data)
                 return
+            if route == "/api/workspace/status":
+                return self.reply(workspace_status())
+            if route == "/api/editor/list":
+                args = parse_qs(urlparse(self.path).query)
+                return self.reply(list_files(args.get("subdir", [""])[0]))
+            if route == "/api/editor/open":
+                args = parse_qs(urlparse(self.path).query)
+                return self.reply(open_file(args.get("path", [""])[0]))
             if route == "/api/powershell/catalog":
                 return self.reply(catalog())
             if route == "/api/status":
@@ -48,7 +63,7 @@ class Handler(BaseHTTPRequestHandler):
             if route == "/api/size-home":
                 return self.reply(folder_sizes(str(Path.home()), 15))
             return self.reply({"erro": "Rota desconhecida"}, 404)
-        except (OSError, ValueError, PermissionError) as exc:
+        except (OSError, ValueError, PermissionError, RuntimeError, UnicodeError) as exc:
             return self.reply({"erro": str(exc)}, 400)
 
     def do_POST(self):
@@ -57,19 +72,31 @@ class Handler(BaseHTTPRequestHandler):
         allowed = (f"http://127.0.0.1:{PORT}", f"http://localhost:{PORT}")
         if host not in (f"127.0.0.1:{PORT}", f"localhost:{PORT}") or origin not in allowed:
             return self.reply({"erro": "Origem não autorizada"}, 403)
-        if urlparse(self.path).path != "/api/powershell/diagnose":
+        route = urlparse(self.path).path
+        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save"):
             return self.reply({"erro": "Rota desconhecida"}, 404)
         if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
             return self.reply({"erro": "Content-Type deve ser application/json"}, 415)
         try:
             size = int(self.headers.get("Content-Length", "0"))
-            if not 1 <= size <= 1024:
+            if not 1 <= size <= (550000 if route.startswith("/api/editor/") else 1024):
                 return self.reply({"erro": "Requisição muito grande"}, 413)
             data = json.loads(self.rfile.read(size))
-            if not isinstance(data, dict) or type(data.get("action")) is not str:
-                return self.reply({"erro": "Ação inválida"}, 400)
-            return self.reply(run_action(data["action"]))
-        except (ValueError, OSError, json.JSONDecodeError) as exc:
+            if not isinstance(data, dict):
+                return self.reply({"erro": "JSON inválido"}, 400)
+            if route == "/api/powershell/diagnose":
+                if type(data.get("action")) is not str:
+                    return self.reply({"erro": "Ação inválida"}, 400)
+                return self.reply(run_action(data["action"]))
+            if type(data.get("path")) is not str or type(data.get("content")) is not str:
+                return self.reply({"erro": "Informe path e content"}, 400)
+            sha = data.get("sha256")
+            if sha is not None and (type(sha) is not str or len(sha) != 64 or any(c not in "0123456789abcdef" for c in sha)):
+                return self.reply({"erro": "Hash de versão inválido"}, 400)
+            if route == "/api/editor/preview":
+                return self.reply(proposal(data["path"], data["content"], sha))
+            return self.reply(save_file(data["path"], data["content"], sha))
+        except (ValueError, OSError, PermissionError, RuntimeError, UnicodeError) as exc:
             return self.reply({"erro": str(exc)}, 400)
 
     def reply(self, obj, status=200):
