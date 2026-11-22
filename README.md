@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.5.0 (protótipo local, com editor manual protegido)** · Interface em português do Brasil.
+> Versão: **0.5.1 (protótipo local, com editor manual protegido)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -182,6 +182,25 @@ No modo restrito, as ferramentas Groq de arquivos enxergam apenas a pasta autori
 Para entender as restrições, riscos e testes: [manuais/FERRAMENTAS_SEGURAS.md](manuais/FERRAMENTAS_SEGURAS.md) e [manuais/SEGURANCA_AGENTES.md](manuais/SEGURANCA_AGENTES.md).
 
 **Atenção:** a interface do Monaco depende da CDN do jsDelivr e portanto necessita internet para carregar esse editor. Quando indisponível, há um campo de texto alternativo. O programa ainda não passou por auditoria de segurança ou testes completos em Windows de terceiros. Evite abrir projetos que contenham segredos e não exponha a porta 8767 na rede.
+
+## Dois modos da interface (v0.5.1)
+
+No **modo Projeto Protegido**, quando `WMK_WORKSPACE` está configurado, o painel principal exibe apenas a pasta autorizada, os arquivos visíveis e a situação de segurança. As janelas de discos, hardware, Ollama e PowerShell ficam ocultas em vez de apresentar mensagens de erro. O botão **Code Studio** abre o editor Monaco.
+
+No **modo Manutenção**, sem `WMK_WORKSPACE`, o painel mostra normalmente discos, hardware, Ollama e PowerShell de diagnóstico. Para mudar de modo, pare o servidor e inicie novamente com ou sem a variável; alternar somente o navegador não altera as permissões.
+
+No PowerShell:
+```powershell
+# Projeto protegido:
+$env:WMK_WORKSPACE = 'D:\Ferramentas\WMK-Desktop-Bridge'
+py web_server.py
+
+# Para voltar à manutenção (em uma nova execução após Ctrl+C):
+Remove-Item Env:WMK_WORKSPACE -ErrorAction SilentlyContinue
+py web_server.py
+```
+
+**Não há botão de alternância em tempo real:** mudar o ambiente do servidor requer reinicialização, para evitar reconfiguração acidental das permissões.
 
 ## Segurança
 
