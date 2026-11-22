@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WMK Desktop Bridge 0.5.0</title>
+<title>WMK Desktop Bridge 0.5.1</title>
 <style>
 :root{color-scheme:dark;font-family:Segoe UI,Arial,sans-serif;background:#0c111b;color:#dfedfa}
 *{box-sizing:border-box}body{margin:0;overflow:hidden}header{height:64px;background:#111c2d;display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid #29465b}
@@ -17,7 +17,7 @@ footer{height:30px;background:#111c2d;color:#8daec3;padding:6px 18px;font-size:1
 @media(max-width:850px){body{overflow:auto}#workspace{height:auto;padding:12px;display:grid;gap:12px}.panel,#disks,#home,#ollama,#about,#powershell{position:relative;top:auto;left:auto;width:100%;height:250px}}
 </style></head>
 <body>
-<header><div><h1>WMK Desktop Bridge <small>v0.5.0</small></h1><small>Diagnóstico local • somente leitura • painéis móveis</small></div><div><button id="editor-open" type="button">✏️ Code Studio</button> <button id="refresh">Atualizar</button> <button id="reset">Restaurar layout</button></div></header>
+<header><div><h1>WMK Desktop Bridge <small>v0.5.1</small></h1><small>Diagnóstico local • somente leitura • painéis móveis</small></div><div><button id="editor-open" type="button">✏️ Code Studio</button> <button id="refresh">Atualizar</button> <button id="reset">Restaurar layout</button></div></header>
 <main id="workspace">
 <section class="panel" id="disks"><div class="bar">💽 Discos <span>☰</span></div><div class="content">Carregando...</div></section>
 <section class="panel" id="home"><div class="bar">📁 Pasta do usuário <span>☰</span></div><div class="content">Carregando...</div></section>
@@ -49,11 +49,40 @@ function showHardware(d){
 }
 function hardwareReport(){const txt=document.querySelector('#hardware .content').textContent;return 'WMK Desktop Bridge - Relatório de Hardware\nData: '+new Date().toLocaleString('pt-BR')+'\nAutor: Walney Moreira Klein\nRelatório sem endereços MAC\n\n'+txt+'\n';}
 function exportHardware(ext){if(!hardwareData||hardwareData.status!=='ok'){alert('Carregue o inventário de hardware antes de exportar.');return;}let content,mime;if(ext==='json'){const clone=JSON.parse(JSON.stringify(hardwareData));for(const group of Object.values(clone.categorias||{})){for(const item of group.dados||[]){delete item.MACAddress;}}content=JSON.stringify(clone,null,2);mime='application/json';}else{content=hardwareReport();mime='text/plain';}const blob=new Blob(['\ufeff',content],{type:mime+';charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='WMK-Hardware-'+new Date().toISOString().slice(0,10)+'.'+ext;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function setProjectMode(project){
+ const restricted=['disks','ollama','hardware','powershell'];
+ for(const id of restricted)document.getElementById(id).style.display=project?'none':'';
+ document.querySelector('#home .bar').firstChild.textContent=project?'📁 Pasta autorizada ':'📁 Pasta do usuário ';
+ const subtitle=document.querySelector('header small:not(h1 small)');
+ if(subtitle)subtitle.textContent=project?'Projeto protegido · IA restrita à pasta configurada':'Diagnóstico local · painéis móveis';
+}
+async function loadProject(){
+ try {
+  const result=await fetchJSON('/api/workspace/status');
+  if(!result.configurado){put('home',result.erro||'Nenhum projeto configurado.');return}
+  const listing=await fetchJSON('/api/editor/list');
+  const names=listing.itens.map(item=>(item.tipo==='pasta'?'📁 ':'📄 ')+item.nome);
+  put('home','Pasta: '+result.pasta+'\n\n'+(names.length?names.join('\n'):'(Nenhum arquivo visível)')+'\n\nAbra Code Studio para navegar e editar com revisão.');
+ }catch(e){put('home','Falha ao consultar projeto: '+e.message)}
+}
 function put(id,text){document.querySelector('#'+id+' .content').replaceChildren(document.createTextNode(text));}
 async function fetchJSON(url){const r=await fetch(url,{cache:'no-store'});const j=await r.json();if(!r.ok)throw Error(j.erro||r.status);return j}
 async function load(){
- try{let data=await fetchJSON('/api/drives');const target=document.querySelector('#disks .content');target.replaceChildren();data.forEach(d=>{let wrap=document.createElement('div');wrap.className='disk';let label=document.createElement('div');label.textContent=d.unidade+'  —  '+d.livre_gb+' GB livres / '+d.total_gb+' GB';let track=document.createElement('div');track.className='track';let fill=document.createElement('div');fill.className='fill';fill.style.width=Math.min(100,100*d.usado_gb/d.total_gb)+'%';track.append(fill);wrap.append(label,track);target.append(wrap)})}catch(e){put('disks','Erro: '+e.message)}
- for(const [id,url,format] of [['home','/api/home',d=>d.map(x=>(x.tipo==='pasta'?'📁 ':'📄 ')+x.nome).join('\n')],['ollama','/api/ollama',showOllama],['hardware','/api/hardware',showHardware],['about','/api/status',d=>'Versão: '+d.versao+'\nModo: '+d.modo+'\nRaízes autorizadas:\n'+d.raizes_autorizadas.join('\n')]]){try{put(id,id==='ollama'?'Consultando API local do Ollama...': 'Carregando...');const result=await fetchJSON(url);if(id==='hardware')hardwareData=result;put(id,format(result))}catch(e){put(id,'Erro: '+e.message)}}
+ let status;
+ try{status=await fetchJSON('/api/status');}catch(e){put('about','Erro ao carregar status: '+e.message);return}
+ const project=status.politica?.modo==='projeto_restrito';
+ setProjectMode(project);
+ const roots=(status.raizes_autorizadas||[]).join('\n');
+ put('about','Versão: '+status.versao+'\nModo: '+(project?'PROJETO PROTEGIDO':'MANUTENÇÃO')+'\nRaízes autorizadas:\n'+roots+'\n\nExclusão pela IA: bloqueada');
+ if(project){await loadProject();return}
+ try{
+  const data=await fetchJSON('/api/drives');
+  const target=document.querySelector('#disks .content');target.replaceChildren();
+  data.forEach(d=>{const wrap=document.createElement('div');wrap.className='disk';const label=document.createElement('div');label.textContent=d.unidade+' — '+d.livre_gb+' GB livres / '+d.total_gb+' GB';const track=document.createElement('div');track.className='track';const fill=document.createElement('div');fill.className='fill';fill.style.width=Math.min(100,100*d.usado_gb/d.total_gb)+'%';track.append(fill);wrap.append(label,track);target.append(wrap)});
+ }catch(e){put('disks','Erro: '+e.message)}
+ const tasks=[['home','/api/home',d=>d.map(x=>(x.tipo==='pasta'?'📁 ':'📄 ')+x.nome).join('\n')],['ollama','/api/ollama',showOllama],['hardware','/api/hardware',showHardware]];
+ await Promise.all(tasks.map(async([id,url,format])=>{try{put(id,'Carregando...');const data=await fetchJSON(url);if(id==='hardware')hardwareData=data;put(id,format(data))}catch(e){put(id,'Erro: '+e.message)}}));
+ await loadPowerShellCatalog();
 }
 async function loadPowerShellCatalog(){try{const actions=await fetchJSON('/api/powershell/catalog');const select=document.getElementById('ps-action');select.replaceChildren();actions.forEach(item=>{const option=document.createElement('option');option.value=item.id;option.textContent=item.descricao;select.append(option)});}catch(e){document.getElementById('ps-output').textContent='Não foi possível obter ações: '+e.message;}}
 async function runPowershell(){const action=document.getElementById('ps-action').value;if(!action)return;const selected=document.getElementById('ps-action').selectedOptions[0].textContent;if(!confirm('Autorizar diagnóstico PowerShell somente leitura?\\n\\n'+selected))return;const button=document.getElementById('ps-run');button.disabled=true;const target=document.getElementById('ps-output');target.textContent='Executando '+selected+'...';try{const response=await fetch('/api/powershell/diagnose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action})});const data=await response.json();target.textContent=data.saida||data.erro||JSON.stringify(data,null,2);if(data.status!=='ok'&&data.erro)target.textContent='Erro: '+data.erro+'\\n'+(data.saida||'');}catch(e){target.textContent='Falha: '+e.message;}finally{button.disabled=false;}}
@@ -65,7 +94,6 @@ document.querySelectorAll('#hardware .panel-actions button').forEach(b=>b.addEve
 document.getElementById('copy-hardware').onclick=async()=>{if(!hardwareData||hardwareData.status!=='ok')return alert('Não há inventário para copiar.');try{await navigator.clipboard.writeText(hardwareReport());const b=document.getElementById('copy-hardware');b.textContent='✓ Copiado';setTimeout(()=>b.textContent='📋 Copiar',1500);}catch(e){alert('Não foi possível copiar: '+e.message);}};
 document.getElementById('txt-hardware').onclick=()=>exportHardware('txt');
 document.getElementById('json-hardware').onclick=()=>exportHardware('json');
-document.getElementById('ps-run').addEventListener('click',runPowershell);document.getElementById('ps-run').addEventListener('pointerdown',e=>e.stopPropagation());document.getElementById('ps-action').addEventListener('pointerdown',e=>e.stopPropagation());loadPowerShellCatalog();
-document.getElementById('editor-open').onclick=()=>location.assign('/editor');
+document.getElementById('ps-run').addEventListener('click',runPowershell);document.getElementById('ps-run').addEventListener('pointerdown',e=>e.stopPropagation());document.getElementById('ps-action').addEventListener('pointerdown',e=>e.stopPropagation());document.getElementById('editor-open').onclick=()=>location.assign('/editor');
 document.getElementById('refresh').onclick=load;document.getElementById('reset').onclick=()=>{localStorage.removeItem(key);location.reload()};load();
 </script></body></html>
