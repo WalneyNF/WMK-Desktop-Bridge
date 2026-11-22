@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.7.5 (correção do status com workspace inválido)** · Interface em português do Brasil.
+> Versão: **0.7.6 (Groq/Ollama revisando código e calculadora de testes)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -80,6 +80,18 @@ Invoke-RestMethod 'http://127.0.0.1:8767/api/workspace/status' | ConvertTo-Json
 ```
 
 O primeiro resultado precisa informar `versao: 0.7.5`; se ainda mostrar a versão antiga, o processo anterior provavelmente continua ativo. Veja também `tests/test_status_workspace.py`.
+
+## Teste real do Groq/Ollama — v0.7.6
+
+A versão 0.7.6 corrige a exigência de JSON para operações **Explicar** e **Revisar** no Code Studio. Respostas dessas operações agora são aceitas como texto normal. Para **Corrigir**, **Refatorar** e **Gerar**, o JSON estruturado continua necessário para comparar arquivos completos.
+
+O Code Studio possui os botões **Verificar configuração** (informa chave Groq presente e modelos Ollama locais) e **Testar resposta do provedor (sem arquivo)**, que realiza uma chamada mínima ao serviço escolhido sem enviar código-fonte. Quando a consulta falhar, a interface exibe a mensagem do backend em vez de apenas o status HTTP 400.
+
+Foi adicionado um projeto de exemplo **Calculadora WMK** em `exemplos/calculadora/`, com `index.html`, `style.css` e `app.js`. Acesse `http://127.0.0.1:8767/exemplo/calculadora` para testar a calculadora, ou abra os arquivos no Monaco para pedir uma revisão à IA. Configure `WMK_WORKSPACE` com o caminho do próprio repositório para encontrá-los no explorador.
+
+**Manual de configuração e diagnóstico:** [manuais/TESTE_IA_CALCULADORA.md](manuais/TESTE_IA_CALCULADORA.md).
+
+As integrações com provedores reais ainda requerem validação no Windows do usuário. Os novos testes automatizados utilizam respostas simuladas, não consomem a API Groq nem comprovam conectividade externa.
 
 ## Instalação no Windows 10/11
 
