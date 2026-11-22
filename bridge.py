@@ -55,6 +55,8 @@ def drives() -> list[dict]:
 
 
 def list_folder(path: str, limit: int = 100) -> list[dict]:
+    if os.getenv("WMK_WORKSPACE", "").strip():
+        raise PermissionError("Modo pasta única ativo: use wmk_workspace_list para filtrar arquivos sensíveis.")
     base = safe_path(path)
     if not base.is_dir():
         raise ValueError("A pasta não existe")
@@ -73,6 +75,8 @@ def list_folder(path: str, limit: int = 100) -> list[dict]:
 
 
 def folder_sizes(path: str, limit: int = 20, max_files: int = 200000) -> dict:
+    if os.getenv("WMK_WORKSPACE", "").strip():
+        raise PermissionError("Modo pasta única ativo: análise genérica desabilitada para proteger arquivos sensíveis.")
     base = safe_path(path)
     if not base.is_dir():
         raise ValueError("A pasta não existe")
