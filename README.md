@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.8.2 (Groq: correção do erro json_validate_failed no agente de projeto)** · Interface em português do Brasil.
+> Versão: **0.9.0 (tela WMK Coding Studio com motor real OpenCode)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -179,6 +179,18 @@ py web_server.py
 Confirme `0.8.2` em `http://127.0.0.1:8767/api/status`. Em `/editor` use o botão **🛠 Trabalhar no projeto**, abra `exemplos/calculadora/index.html` e peça **"No index.html, adicione aria-label à tecla AC; preserve CSS e JS; proponha uma única alteração pequena"**. Confira o diff e aprove para salvar.
 
 **Limite:** isto corrige o contrato de resposta Groq; não adiciona execução de comandos, builds, testes ou sandbox Codex. A integração real com sua conta Groq e seu navegador Windows ainda requer teste.
+
+## v0.9.0 — WMK Coding Studio (motor OpenCode real)
+
+**O problema das versões anteriores:** o painel do Monaco fazia a IA devolver código em JSON e guardava propostas. Isso é diferente de um agente como Codex ou OpenCode. O modelo podia responder que tinha corrigido algo sem alterar qualquer arquivo; erros `json_validate_failed` e respostas vazias bloqueavam tarefas.
+
+**Novo fluxo de agente real:** o painel `http://127.0.0.1:8767/coder` integra o executável OpenCode já instalado no PC, inicia o servidor web protegido por senha e oferece acesso à **interface oficial do OpenCode** em `http://127.0.0.1:4097`. O OpenCode tem ferramentas reais para ler e editar arquivos da pasta do projeto; as alterações são feitas por ele após as permissões exigidas, não por sugestões JSON do WMK.
+
+Botões **Iniciar OpenCode**, **Abrir interface**, **Encerrar servidor** e **Verificar**; senha temporária por sessão; configuração própria do OpenCode em `config/wmk-opencode-policy.json` com `shell: deny`, `external_directory: deny` e `edit: ask`. **Não é sandbox de Windows**; o processo ainda roda com privilégios do usuário atual.
+
+Use `opencode --version` para verificar o programa e `WMK_WORKSPACE` para selecionar sua pasta. A chave Groq do painel WMK não é transmitida automaticamente ao OpenCode; configure provedores na interface dele. Ainda requer teste real no seu Windows para confirmar o funcionamento do servidor OpenCode instalado e o comportamento das permissões na sua versão.
+
+**Manual:** [manuais/OPENCODE_REAL.md](manuais/OPENCODE_REAL.md).
 
 ## Instalação no Windows 10/11
 
