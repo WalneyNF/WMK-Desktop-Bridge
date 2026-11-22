@@ -45,12 +45,22 @@ def ai_status() -> dict:
 
 def _fetch(url: str, data: dict, headers: dict, timeout: int) -> dict:
     body = json.dumps(data, ensure_ascii=False).encode("utf-8")
-    request = urllib.request.Request(url, data=body, headers=headers, method="POST")
+    request = urllib.request.Request(url, data=body, headers={
+        **headers,
+        "User-Agent": "WMK-Desktop-Bridge/0.7.7 (+https://github.com/WalneyNF/WMK-Desktop-Bridge)",
+        "Accept": "application/json",
+    }, method="POST")
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return json.load(response)
     except urllib.error.HTTPError as exc:
         message = exc.read(1200).decode("utf-8", errors="replace")
+        if exc.code == 403 and "error code: 1010" in message.lower():
+            raise RuntimeError(
+                "Groq bloqueado pela Cloudflare (403/1010: assinatura do cliente HTTP). "
+                "O WMK ja envia um User-Agent identificado. Se persistir, contate "
+                "o suporte Groq e informe codigo 1010. Isso nao comprova chave errada."
+            ) from None
         raise RuntimeError(f"Provedor HTTP {exc.code}: {message[:900]}") from None
     except urllib.error.URLError as exc:
         raise RuntimeError(f"Não foi possível conectar ao provedor: {exc.reason}") from None
