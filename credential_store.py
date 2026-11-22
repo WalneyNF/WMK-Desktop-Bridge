@@ -69,7 +69,10 @@ def _crypt(data: bytes, protect: bool) -> bytes:
     try:
         return ctypes.string_at(output_blob.pbData, output_blob.cbData)
     finally:
-        ctypes.windll.kernel32.LocalFree(output_blob.pbData)
+        free = ctypes.windll.kernel32.LocalFree
+        free.argtypes = [wintypes.HLOCAL]
+        free.restype = wintypes.HLOCAL
+        free(ctypes.cast(output_blob.pbData, wintypes.HLOCAL))
 
 
 def save(name: str, value: str) -> dict:
