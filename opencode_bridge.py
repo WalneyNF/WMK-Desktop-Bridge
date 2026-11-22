@@ -127,7 +127,7 @@ def start() -> dict:
         # diretamente como um .exe. Somente o caminho já resolvido pelo PATH
         # é passado ao cmd.exe. Nenhum texto do usuário vira comando.
         if os.name == "nt" and Path(exe).suffix.lower() in (".cmd", ".bat"):
-            command = [os.environ.get("ComSpec", r"C:\\Windows\\System32\\cmd.exe"),
+            command = [os.environ.get("ComSpec", "cmd.exe"),
                        "/d", "/s", "/c", subprocess.list2cmdline(command)]
         try:
             PROCESS = subprocess.Popen(
@@ -144,7 +144,7 @@ def start() -> dict:
         pid = PROCESS.pid
 
     # Espera finita somente por inicialização local, nunca pelo trabalho da IA.
-    for _ in range(22):
+    for _ in range(50):
         if PROCESS.poll() is not None:
             raise RuntimeError(
                 "OpenCode encerrou ao iniciar. Confira \"opencode serve --help\" "
@@ -153,7 +153,7 @@ def start() -> dict:
         if _healthy(password):
             return {"ativo": True, "url": URL, "senha": password, "pasta": str(root),
                     "pid": pid, "reutilizado": False}
-        time.sleep(0.35)
+        time.sleep(0.4)
     raise RuntimeError(
         "OpenCode ainda não respondeu no localhost:4097. Confira a versão instalada "
         "e se a porta está livre. Nenhuma tarefa foi enviada à IA."
