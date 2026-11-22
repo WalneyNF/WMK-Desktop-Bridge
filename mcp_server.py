@@ -4,6 +4,7 @@ from bridge import diagnostic, drives, list_folder, folder_sizes, ollama_models
 from hardware import hardware_info
 from powershell_tools import catalog, run_action
 from workspace import workspace_status, list_workspace, read_workspace
+from blender_client import status as blender_status, list_objects as blender_list_objects
 
 mcp = FastMCP("WMK Desktop Bridge")
 
@@ -71,6 +72,17 @@ def wmk_workspace_list(subdir: str = "", limit: int = 100) -> dict:
 def wmk_workspace_read(relative: str) -> dict:
     """Ler arquivo texto UTF-8 de até 256 KiB, dentro da pasta autorizada."""
     return read_workspace(relative)
+
+@mcp.tool()
+def wmk_blender_status() -> dict:
+    """Verificar conexão com o add-on WMK Blender local (sem modificar cena)."""
+    return blender_status()
+
+
+@mcp.tool()
+def wmk_blender_list() -> dict:
+    """Listar objetos da cena Blender local, exige token e não altera objetos."""
+    return blender_list_objects()
 
 
 if __name__ == "__main__":
