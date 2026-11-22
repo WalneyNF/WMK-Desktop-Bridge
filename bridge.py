@@ -11,7 +11,7 @@ import urllib.request
 from pathlib import Path
 from security_policy import require_diagnostic_mode, policy_status
 
-VERSION = "0.8.2"
+VERSION = "0.9.0"
 GIB = 1024 ** 3
 
 
