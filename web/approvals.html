@@ -1,0 +1,21 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WMK Aprovações MCP</title>
+<style>:root{color-scheme:dark;font:14px Segoe UI,Arial;background:#0c1725;color:#e3f1fa}*{box-sizing:border-box}body{margin:0}header{background:#172d42;padding:15px;display:flex;align-items:center;gap:12px}h1{font-size:20px;margin:0;color:#70e0ec}main{max-width:1150px;margin:15px auto;display:grid;grid-template-columns:1fr 2fr;gap:12px;padding:0 12px}section{background:#102336;border:1px solid #315773;border-radius:8px;padding:14px;min-height:420px}button{border:1px solid #397b99;background:#184b69;color:#e7f6ff;border-radius:5px;padding:9px;cursor:pointer}button:disabled{opacity:.45}#items{display:grid;gap:7px;margin-top:12px}#items button{text-align:left;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;overflow:auto;max-height:62vh;background:#061420;padding:13px;border:1px solid #25455d;border-radius:7px;font:12px/1.5 Consolas,monospace}.muted{color:#a6c3d3;font-size:12px}.actions{display:flex;flex-wrap:wrap;gap:8px}.warning{color:#ffce81}footer{padding:10px 16px;color:#91b5c4}@media(max-width:800px){main{grid-template-columns:1fr}}</style></head><body>
+<header><h1>🛡️ Aprovações de alterações MCP</h1><span class="muted">IA propõe · pessoa revisa · WMK salva com backup</span><button style="margin-left:auto" onclick="location.href='/'">Voltar</button></header>
+<main><section><h2>Propostas pendentes</h2><p class="muted">Apenas arquivos da pasta autorizada. Não existe exclusão de arquivos por esta interface.</p><button id="refresh">Atualizar lista</button><div id="items">Carregando propostas...</div></section>
+<section><h2>Revisar alteração</h2><p class="muted" id="info">Selecione uma proposta. Leia o diff e confira a versão antes de aprovar.</p><pre id="diff">Nenhuma proposta selecionada.</pre><div class="actions"><button id="approve" disabled>✓ Aprovar e salvar arquivo</button><button id="reject" disabled>Recusar proposta</button></div><p id="feedback" class="warning"></p></section></main>
+<footer>Walney Moreira Klein — walneyk@hotmail.com · WMK Desktop Bridge</footer>
+<script>
+let current=null;
+const $=x=>document.getElementById(x);
+async function api(url,data){const res=await fetch(url,data?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}:{});const d=await res.json();if(!res.ok)throw Error(d.erro||res.status);return d}
+async function refresh(){try{const arr=await api('/api/mcp/pending');$('items').replaceChildren();if(!arr.length){$('items').textContent='Nenhuma alteração pendente.';return}
+for(const item of arr){const b=document.createElement('button');b.textContent='📄 '+item.arquivo+' — '+(item.descricao||'sem descrição');b.onclick=()=>open(item.id);$('items').append(b)}
+}catch(e){$('items').textContent='Erro: '+e.message}}
+async function open(id){current=null;$('approve').disabled=true;$('reject').disabled=true;$('feedback').textContent='';
+try{const p=await api('/api/mcp/proposal?id='+encodeURIComponent(id));current=p;$('info').textContent=p.arquivo+' | '+p.bytes+' bytes | SHA256: '+p.sha256;$('diff').textContent=p.diff||'(Sem alterações)';$('approve').disabled=false;$('reject').disabled=false}
+catch(e){$('diff').textContent='A proposta não pode ser revisada: '+e.message}}
+$('approve').onclick=async()=>{if(!current)return;const p=current;if(!confirm('Confirma SALVAR a proposta para '+p.arquivo+'? Backup será criado ao sobrescrever.'))return;
+$('approve').disabled=true;try{const r=await api('/api/mcp/approve',{id:p.id,sha256:p.sha256});$('feedback').textContent='Arquivo salvo: '+r.arquivo+' | backup: '+(r.backup||'arquivo novo');current=null;$('reject').disabled=true;await refresh()}catch(e){$('feedback').textContent='Falha: '+e.message;$('approve').disabled=false}};
+$('reject').onclick=async()=>{if(!current)return;const p=current;if(!confirm('Recusar esta proposta (não apaga arquivos)?'))return;try{await api('/api/mcp/reject',{id:p.id});current=null;$('approve').disabled=true;$('reject').disabled=true;$('diff').textContent='Proposta recusada.';await refresh()}catch(e){$('feedback').textContent=e.message}};
+$('refresh').onclick=refresh;refresh();
+</script></body></html>
