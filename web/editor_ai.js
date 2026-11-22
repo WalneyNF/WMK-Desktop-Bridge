@@ -1,4 +1,4 @@
-/* WMK Code Studio — Assistente Groq/Ollama v0.5.2.
+/* WMK Code Studio — Assistente Groq/Ollama v0.7.6.
    Não grava arquivo. Propostas precisam de revisão e salvamento manual. */
 (function () {
   const $ = id => document.getElementById(id);
@@ -24,7 +24,9 @@
     <label style="font-size:12px"><input type="checkbox" id="ai-consent"> Autorizo enviar o texto do editor ao provedor escolhido nesta consulta.</label>
     <button type="button" id="ai-ask">Analisar arquivo com IA</button>
     <button type="button" id="ai-compare" disabled>Comparar sugestão lado a lado</button>
-    <div id="ai-state" class="muted">A IA só recebe o conteúdo do editor; não recebe ferramentas de exclusão.</div>`;
+    <button type="button" id="ai-check">Verificar Groq / Ollama</button>
+    <div id="ai-provider-state" class="muted">Clique em Verificar antes de testar uma análise.</div>
+    <div id="ai-state" class="muted" role="status">A IA só recebe o conteúdo do editor; não recebe ferramentas de exclusão.</div>`;
   const title = aside.querySelector('.panel-title');
   title.insertAdjacentElement('afterend', top);
   const style = document.createElement('style');
@@ -48,9 +50,27 @@
   $('suggestion').placeholder = 'A resposta do Groq/Ollama aparecerá aqui. O código proposto poderá ser comparado antes de entrar no editor.';
   let proposal = null, comparison = null, diffModelA = null, diffModelB = null;
   const setState = value => { $('ai-state').textContent = value; };
+  async function checkProvider(){
+    $('ai-provider-state').textContent = 'Verificando configurações do servidor...';
+    try{
+      const response = await fetch('/api/ai/status',{cache:'no-store'});
+      const result = await response.json();
+      if(!response.ok)throw Error(result.erro || 'HTTP '+response.status);
+      const groq = result.groq_configurado ? 'Chave configurada no servidor' : 'SEM CHAVE no servidor Python';
+      const ollama = result.ollama_online ? 'Online' : 'Offline';
+      const models = (result.ollama_modelos||[]).slice(0,12).join(', ');
+      $('ai-provider-state').textContent = 'Groq: '+groq+' | Ollama: '+ollama+
+        (models?' | Modelos: '+models:'');
+      if($('ai-provider').value==='groq'&&!result.groq_configurado)
+        setState('Groq não está configurado. Defina GROQ_API_KEY e reinicie web_server.py (ou use iniciar-com-chaves.ps1).');
+      if($('ai-provider').value==='ollama'&&!result.ollama_online)
+        setState('Ollama offline. Execute ollama serve ou abra o aplicativo Ollama.');
+    }catch(e){$('ai-provider-state').textContent = 'Falha no diagnóstico: '+e.message;}
+  }
   $('ai-provider').addEventListener('change', () => {
     $('ai-model').value = $('ai-provider').value === 'groq' ? 'openai/gpt-oss-20b' : 'qwen3:1.7b';
     $('ai-consent').checked = false;
+    checkProvider();
   });
   async function ask() {
     if (!currentPath) return setState('Abra um arquivo ou prepare um novo arquivo primeiro.');
@@ -81,8 +101,8 @@
         setState('Análise recebida. Nenhuma alteração foi proposta.');
       }
     } catch (err) {
-      $('suggestion').value = '';
-      setState('Erro: ' + err.message);
+      $('suggestion').value = 'Falha na consulta '+provider+' / '+model+': '+err.message;
+      setState('ERRO AO ANALISAR: '+err.message+' | Use Verificar Groq / Ollama para diagnosticar.');
     } finally {
       $('ai-consent').checked = false;
       $('ai-ask').disabled = false;
@@ -132,6 +152,8 @@
     proposal = null; $('ai-compare').disabled = true;
   }
   $('ai-ask').onclick = ask;
+  $('ai-check').onclick = checkProvider;
+  checkProvider();
   $('ai-compare').onclick = compare;
   $('ai-back').onclick = closeCompare;
   $('ai-apply').onclick = apply;
