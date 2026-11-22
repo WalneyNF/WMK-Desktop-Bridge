@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WMK Central de Agentes e MCP — v0.6.0</title>
+<style>
+:root{color-scheme:dark;font:14px Segoe UI,Arial,sans-serif;background:#0b1420;color:#dceef6}
+*{box-sizing:border-box}body{margin:0}header{padding:14px 20px;background:#182b40;border-bottom:1px solid #35546a;display:flex;align-items:center;gap:15px}h1{font-size:19px;margin:0;color:#65e2f1}
+button,input,select,textarea{font:inherit}button{cursor:pointer;background:#194966;color:#e4f7fd;border:1px solid #327994;padding:8px 10px;border-radius:6px}
+button:disabled{opacity:.45}input,select,textarea{background:#081723;color:#e8f5fa;border:1px solid #3b5c74;border-radius:5px;padding:8px;max-width:100%}
+textarea{resize:vertical;width:100%}label{display:grid;gap:5px;font-size:13px;color:#a9c7d6}
+main{display:grid;grid-template-columns:minmax(250px,1fr) minmax(310px,1.3fr);gap:12px;padding:14px}
+section{border:1px solid #305069;border-radius:9px;background:#102133;padding:14px;min-width:0;display:grid;align-content:start;gap:10px}
+h2{font-size:15px;margin:0;color:#8be5f4}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#091522;padding:10px;border-radius:6px;max-height:300px;overflow:auto;font:12px/1.5 Consolas,monospace}
+.small{font-size:12px;color:#9fb9cb}.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.grow{flex:1}.caps{display:flex;flex-wrap:wrap;gap:12px}
+#agents-list{display:grid;gap:8px} .agent{background:#1b3447;border:1px solid #2c536a;border-radius:7px;padding:10px;text-align:left;cursor:pointer}
+.agent.selected{border-color:#73d7ef;outline:1px solid #73d7ef}.agent small{display:block;color:#9cbccc;margin-top:3px}
+#approval{display:none;border:1px solid #a37b48;background:#211d19;padding:12px;border-radius:7px}
+#approval button{background:#27685e}#approval pre{max-height:180px}footer{padding:8px 16px;color:#9cafbf}
+@media(max-width:800px){main{grid-template-columns:1fr}} 
+</style></head><body>
+<header><h1>WMK Central de Agentes e MCP</h1><span class="small">v0.6.0 • ambiente local • aprovação humana</span><button style="margin-left:auto" onclick="location.href='/'">Voltar</button></header>
+<main>
+<section><h2>🤖 Agentes cadastrados</h2><div id="agents-list">Carregando...</div>
+<h2>➕ Cadastrar novo agente</h2>
+<label>Nome <input id="name" placeholder="Especialista em Blender" maxlength="60"></label>
+<label>Provedor <select id="provider"><option value="ollama">Ollama local</option><option value="groq">Groq</option><option value="openai">OpenAI API</option><option value="gemini">Gemini API</option></select></label>
+<label>Modelo <input id="model" value="qwen3:1.7b" maxlength="100"></label>
+<label>Instruções do agente <textarea id="system" rows="3" maxlength="2500" placeholder="Explique as modificações de maneira simples."></textarea></label>
+<div class="caps"><label><input id="cap-list" type="checkbox" checked> Consultar cena Blender</label><label><input id="cap-create" type="checkbox"> Criar primitivas Blender</label><label><input id="cap-files" type="checkbox"> Ler workspace</label></div>
+<button id="create-agent">Cadastrar agente</button><div id="register-result" class="small"></div>
+</section>
+<section><h2>🔌 Conexões e provedores</h2><div id="providers" class="small">Consultando...</div>
+<div class="row"><button id="check-blender">Testar conexão Blender</button><button id="list-blender">Listar objetos</button></div>
+<pre id="blender-status">Blender ainda não consultado.</pre>
+<h2>🧠 Testar agente com Blender</h2>
+<label>Agente ativo <select id="selected-agent"></select></label>
+<label>Pedido <textarea id="task" rows="4">Crie um cubo azul de tamanho 2 à esquerda e uma esfera vermelha à direita. Não apague nada.</textarea></label>
+<button id="plan">Gerar proposta com IA (não executa)</button>
+<pre id="proposal-result">Selecione agente, confira permissões e proponha uma tarefa.</pre>
+<div id="approval"><b>Revisão obrigatória</b><p class="small">A execução será feita somente no Blender local. Não há exclusão nem Python remoto. Propostas expiram em 120 segundos.</p><pre id="approval-actions"></pre><button id="approve">Aprovar e executar ações exibidas</button><button id="discard">Descartar proposta</button></div>
+<h2>🛡️ Política MCP</h2><p class="small">O WMK expõe ferramentas Blender de consulta ao seu servidor MCP. A criação por IA exige aprovação nesta interface; nenhum MCP externo recebe acesso irrestrito. Cadastro de servidores MCP externos e execução de suas ferramentas exigem uma etapa futura com isolamento e revisão.</p>
+</section></main><footer>Walney Moreira Klein — walneyk@hotmail.com · Licença MIT</footer>
+<script>
+let agents=[], active='', pending=null;
+const $=id=>document.getElementById(id);
+async function api(path,body){const opts=body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)};
+const response=await fetch(path,opts);const data=await response.json();if(!response.ok)throw Error(data.erro||data.error||response.status);return data;}
+function text(id,data){$(id).textContent=typeof data==='string'?data:JSON.stringify(data,null,2);}
+async function refresh(){
+try{
+ agents=await api('/api/agents');const container=$('agents-list');container.replaceChildren();$('selected-agent').replaceChildren();
+ agents.forEach(a=>{const btn=document.createElement('button');btn.className='agent'+(a.id===active?' selected':'');btn.textContent=a.nome;const small=document.createElement('small');small.textContent=a.provider+' · '+a.model+' · '+a.capabilities.join(', ');btn.append(small);btn.onclick=()=>{active=a.id;$('selected-agent').value=a.id;refreshCards();};container.append(btn);
+const option=document.createElement('option');option.value=a.id;option.textContent=a.nome;$('selected-agent').append(option);});
+ if(!active&&agents.length)active=agents[0].id;$('selected-agent').value=active;refreshCards();
+ const p=await api('/api/providers');text('providers',p.map(x=>x.id+': '+(x.configurado?'configurado':'chave não definida')+' ('+x.variavel+')').join('\n'));
+}catch(e){text('register-result','Erro ao carregar: '+e.message)}
+}
+function refreshCards(){document.querySelectorAll('.agent').forEach((e,i)=>e.classList.toggle('selected',agents[i]?.id===active));}
+$('selected-agent').onchange=e=>{active=e.target.value;refreshCards()};
+$('provider').onchange=()=>{$('model').value={ollama:'qwen3:1.7b',groq:'openai/gpt-oss-20b',openai:'gpt-4.1-mini',gemini:'gemini-2.5-flash'}[$('provider').value]};
+$('create-agent').onclick=async()=>{try{
+const caps=[];if($('cap-list').checked)caps.push('blender_list');if($('cap-create').checked)caps.push('blender_create');if($('cap-files').checked)caps.push('workspace_read');
+const obj=await api('/api/agents/register',{nome:$('name').value,provider:$('provider').value,model:$('model').value,system:$('system').value,capabilities:caps});
+active=obj.id;text('register-result','Agente cadastrado: '+obj.nome);await refresh();
+}catch(e){text('register-result','Falha: '+e.message)}};
+$('check-blender').onclick=async()=>{try{text('blender-status',await api('/api/blender/status'))}catch(e){text('blender-status',e.message)}};
+$('list-blender').onclick=async()=>{try{text('blender-status',await api('/api/blender/objects'))}catch(e){text('blender-status',e.message)}};
+function clearProposal(){pending=null;$('approval').style.display='none'}
+$('discard').onclick=()=>{clearProposal();text('proposal-result','Proposta descartada. Nenhuma ação executada.')};
+$('plan').onclick=async()=>{clearProposal();$('plan').disabled=true;text('proposal-result','Consultando modelo...');try{
+ const data=await api('/api/agents/propose',{agent_id:active,task:$('task').value});
+ pending=data.proposta;text('proposal-result',data.explicacao||'Proposta recebida');
+ text('approval-actions',data.acoes);$('approval').style.display='block';
+}catch(e){text('proposal-result','Erro: '+e.message)}finally{$('plan').disabled=false}};
+$('approve').onclick=async()=>{if(!pending)return;
+if(!confirm('Você revisou cada ação? Executar no Blender?'))return;
+const id=pending;clearProposal();$('approve').disabled=true;
+try{text('proposal-result',await api('/api/blender/approve',{proposta:id}))}
+catch(e){text('proposal-result','Falha: '+e.message)}
+finally{$('approve').disabled=false}};
+refresh();
+</script></body></html>
