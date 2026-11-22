@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.2.0 (protótipo local, somente leitura)** · Interface em português do Brasil.
+> Versão: **0.2.1 (protótipo local, somente leitura)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -17,7 +17,7 @@ Criar uma alternativa independente para diagnósticos locais de disco e arquivos
 | Consultar espaço livre/usado em unidades | ✅ |
 | Listar arquivos e subpastas autorizadas | ✅ |
 | Calcular tamanho de subpastas (limite de varredura) | ✅ |
-| Consultar modelos do Ollama | ✅ |
+| Consultar modelos do Ollama (API local, fallback CLI) | ✅ |
 | Servidor MCP local via stdio | ✅ |
 | Painel HTML local com painéis móveis, redimensionáveis e layout persistente | ✅ |
 | Executar PowerShell pela IA | ❌ Não implementado |
@@ -86,6 +86,25 @@ py mcp_server.py
 No Windows, o delimitador entre diretórios é `;`. A variável adiciona raízes permitidas; não substitui a pasta do usuário.
 
 > **Cuidado:** autorizar a raiz de uma unidade expõe toda essa unidade para leitura ao cliente MCP. Configure apenas os diretórios necessários. Não conecte o agente a um cliente de IA não confiável.
+
+## Ollama: tempo limite e diagnóstico
+
+A versão 0.2.1 consulta primeiro `http://127.0.0.1:11434/api/tags` (tempo limite de 5 segundos). Quando a API não responde, tenta `ollama list` com **60 segundos** de tempo limite, em vez dos 15 segundos anteriores.
+
+Para mudar o limite do executável, antes de iniciar o painel:
+
+```powershell
+$env:WMK_OLLAMA_TIMEOUT = '120'
+py web_server.py
+```
+
+O intervalo aceito é de 5 a 180 segundos. Se a API estiver disponível, a consulta é realizada por HTTP e não precisa esperar o processo CLI. Para conferir manualmente:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:11434/api/tags
+```
+
+Ollama indisponível, comando ausente no PATH e tempo esgotado são apresentados como situações distintas. Uma falha de conexão **não comprova** que os modelos foram removidos.
 
 ## Segurança
 
