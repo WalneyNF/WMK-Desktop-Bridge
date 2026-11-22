@@ -16,3 +16,7 @@ config/*.tmp
 config/mcp_proposals.sqlite3
 config/mcp_proposals.sqlite3-wal
 config/mcp_proposals.sqlite3-shm
+
+# OpenCode runtime local
+config/wmk-opencode-policy.json
+config/wmk-opencode-runtime.log
