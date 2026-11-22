@@ -76,6 +76,29 @@ class AIReviewTests(unittest.TestCase):
         result = test_provider({"provider":"ollama", "model":"qwen3:1.7b", "consent":True})
         self.assertTrue(result["ok"])
 
+    @patch("code_ai.urllib.request.urlopen")
+    def test_http_client_declares_user_agent(self, urlopen):
+        from code_ai import _fetch
+        import io
+        response = io.BytesIO(b'{"ok":true}')
+        urlopen.return_value.__enter__.return_value = response
+        result = _fetch("https://api.groq.com/openai/v1/chat/completions",
+                        {"model":"teste"}, {"Content-Type":"application/json"}, 3)
+        self.assertTrue(result["ok"])
+        request = urlopen.call_args.args[0]
+        self.assertIn("WMK-Desktop-Bridge", request.get_header("User-agent"))
+
+    @patch("code_ai.urllib.request.urlopen")
+    def test_cloudflare_1010_has_explanation(self, urlopen):
+        import io
+        from urllib.error import HTTPError
+        from code_ai import _fetch
+        urlopen.side_effect = HTTPError(
+            "https://api.groq.com", 403, "Forbidden",
+            {}, io.BytesIO(b"error code: 1010"))
+        with self.assertRaisesRegex(RuntimeError, "Cloudflare"):
+            _fetch("https://api.groq.com", {}, {}, 3)
+
     def test_missing_consent(self):
         payload=self.request()
         payload["consent"]=False
