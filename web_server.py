@@ -11,7 +11,7 @@ from powershell_tools import catalog, run_action
 from workspace import workspace_status
 from editor_backend import list_files, open_file, proposal, save_file
 from code_ai import ai_status, suggest_code
-from agent_hub import list_agents, register_agent, providers_status, propose, ask_workspace
+from agent_hub import list_agents, register_agent, providers_status, propose, ask_workspace, chat_agent
 from blender_client import status as blender_status, list_objects as blender_objects, execute_approved
 from skills_manager import list_skills, save_skill
 from media_lab import image_info, vision_ollama, model_info
@@ -103,7 +103,7 @@ class Handler(BaseHTTPRequestHandler):
         if host not in (f"127.0.0.1:{PORT}", f"localhost:{PORT}") or origin not in allowed:
             return self.reply({"erro": "Origem não autorizada"}, 403)
         route = urlparse(self.path).path
-        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest", "/api/agents/register", "/api/agents/propose", "/api/agents/ask", "/api/blender/approve", "/api/skills/save", "/api/media/info", "/api/media/vision"):
+        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest", "/api/agents/register", "/api/agents/propose", "/api/agents/ask", "/api/blender/approve", "/api/skills/save", "/api/media/info", "/api/media/vision", "/api/agents/chat"):
             return self.reply({"erro": "Rota desconhecida"}, 404)
         if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
             return self.reply({"erro": "Content-Type deve ser application/json"}, 415)
@@ -128,6 +128,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(vision_ollama(data.get("path"),data.get("prompt"),data.get("model")))
             if route == "/api/agents/register":
                 return self.reply(register_agent(data))
+            if route == "/api/agents/chat":
+                return self.reply(chat_agent(data.get("agent_id"), data.get("message"), data.get("history", [])))
             if route == "/api/agents/ask":
                 return self.reply(ask_workspace(data.get("agent_id"), data.get("relative"), data.get("question"), data.get("consent")))
             if route == "/api/agents/propose":
