@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.7.4 (protótipo: agente programador iterativo)** · Interface em português do Brasil.
+> Versão: **0.7.5 (correção do status com workspace inválido)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -57,6 +57,29 @@ O resultado aparece em `/approvals`, onde o usuário lê o diff, aprova ou rejei
 **Não é ainda um substituto funcional completo para Codex/Claude Code**: não inclui shell, execução de testes/build, busca semântica, Git ou sandbox forte do Windows. Tarefas longas e projetos extensos exigem versões posteriores. O uso de APIs externas pode transmitir conteúdo dos arquivos para o provedor após consentimento.
 
 **Manual:** [manuais/AGENTE_PROGRAMADOR.md](manuais/AGENTE_PROGRAMADOR.md).
+
+## Correção do erro /api/status 400 — v0.7.5
+
+Se o servidor iniciar com `WMK_WORKSPACE` apontando para uma pasta inexistente, a versão anterior lançava exceção e retornava HTTP 400. **Agora /api/status responde com a situação da pasta e um aviso**, enquanto as ferramentas de arquivos continuam bloqueadas até que o usuário configure uma pasta válida. Não é necessário desligar as proteções para visualizar o painel.
+
+No PowerShell, após `git pull`, crie uma pasta de teste explícita e inicie o servidor:
+
+```powershell
+cd D:\Ferramentas\WMK-Desktop-Bridge
+git pull
+New-Item -ItemType Directory -Force 'D:\Ferramentas\WMK-Teste-IA' | Out-Null
+$env:WMK_WORKSPACE = 'D:\Ferramentas\WMK-Teste-IA'
+py web_server.py
+```
+
+**Pare a instância antiga com Ctrl+C antes de reiniciar** e atualize o navegador com Ctrl+F5. Teste:
+
+```powershell
+Invoke-RestMethod 'http://127.0.0.1:8767/api/status' | ConvertTo-Json -Depth 6
+Invoke-RestMethod 'http://127.0.0.1:8767/api/workspace/status' | ConvertTo-Json
+```
+
+O primeiro resultado precisa informar `versao: 0.7.5`; se ainda mostrar a versão antiga, o processo anterior provavelmente continua ativo. Veja também `tests/test_status_workspace.py`.
 
 ## Instalação no Windows 10/11
 
