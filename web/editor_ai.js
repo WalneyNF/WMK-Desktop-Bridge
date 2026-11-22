@@ -73,6 +73,18 @@
     try{await navigator.clipboard.writeText(responseText);setState('Resposta copiada.')}
     catch(e){setState('Falha ao copiar: '+e.message)}
   };
+  $('ai-export-md').onclick = ()=>{
+    if(!responseText)return setState('Nenhuma análise Markdown para exportar.');
+    const name = (currentPath || 'analise').split(/[\\/]/).pop().replace(/[^a-zA-Z0-9._-]/g,'_');
+    const filename = 'WMK-analise-' + name + '.md';
+    const blob = new Blob([responseText],{type:'text/markdown;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;link.download = filename;link.style.display='none';
+    document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    setState('Arquivo Markdown disponibilizado pelo navegador: '+filename);
+  };
   $('ai-clear-output').onclick = ()=>{
     responseText='';
     showResponse('Abra um arquivo, configure uma IA e solicite a análise.', 'empty','Sem análise');
