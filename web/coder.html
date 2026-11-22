@@ -1,0 +1,115 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WMK Coding — OpenCode Real</title>
+<style>
+:root{font-family:Segoe UI,Arial,sans-serif;color-scheme:dark;background:#09131f;color:#e8f4fa}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 80% 0%,#19405060,transparent 55%),#09131f}
+header{padding:14px 23px;background:#15293b;border-bottom:1px solid #2f5268;display:flex;align-items:center;gap:15px}
+h1{font-size:18px;margin:0;color:#84edfa}header small{color:#9bbbc9}header button{margin-left:auto}
+main{max-width:1100px;margin:auto;padding:25px;display:grid;gap:18px}
+.panel{border:1px solid #31566e;border-radius:12px;background:#14293b;padding:22px}
+.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(250px,.8fr);gap:20px}
+h2{font-size:22px;margin:0 0 12px}p{color:#b6ccd9;line-height:1.65;margin:0 0 14px}
+button{padding:11px 18px;border:1px solid #3c7f96;border-radius:8px;background:#18536a;color:#effaff;font-weight:600;cursor:pointer}
+button:hover{background:#1e738c}button:disabled{opacity:.4}
+.primary{background:#1a99ab;color:#061920;border-color:#63d9e7}
+.secondary{background:#203749}
+.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:18px}
+.field{padding:11px 13px;border:1px solid #345467;background:#0b1b2a;border-radius:8px;overflow-wrap:anywhere;font:13px/1.6 Consolas,monospace}
+.green{color:#81e8bb}.yellow{color:#f6d08c}.muted{color:#9ab7c8}
+ol{padding-left:20px;line-height:1.75;color:#c7deea}li{margin-bottom:7px}
+.status{min-height:38px;margin-top:15px;white-space:pre-wrap;overflow-wrap:anywhere;padding:10px;background:#0c2031;border-radius:6px;color:#b4dceb}
+label{display:block;margin:12px 0 6px;color:#b6cfde;font-size:12px}
+.password{display:flex;gap:8px;align-items:center}
+.password input{flex:1;min-width:0;border:1px solid #3c6475;background:#0c1c29;color:#e5f8fb;border-radius:7px;padding:11px;font:14px Consolas}
+#credentials{display:none;margin-top:15px}
+footer{color:#86a6b6;text-align:center;padding:20px}
+@media(max-width:770px){.hero{grid-template-columns:1fr}main{padding:12px}header{flex-wrap:wrap}}
+</style></head><body>
+<header><h1>WMK Coding Studio</h1><small>Motor real: OpenCode</small><button onclick="location.href='/editor'">Voltar ao Monaco</button></header>
+<main>
+<section class="hero">
+<div class="panel">
+<h2>Agente que realmente programa</h2>
+<p>Esta tela inicia a <strong>interface oficial do OpenCode</strong> no seu Windows. O OpenCode lê e modifica arquivos, possui sessões, ferramentas e trabalha com o modelo configurado nele. Não utiliza o antigo mecanismo de respostas JSON do WMK.</p>
+<label>Pasta de projeto autorizada (WMK_WORKSPACE)</label><div class="field" id="workspace">Consultando...</div>
+<label>OpenCode instalado</label><div class="field" id="installation">Verificando...</div>
+<label>Servidor OpenCode</label><div class="field" id="running">Verificando...</div>
+<div class="actions">
+<button class="primary" id="start">Iniciar OpenCode para esta pasta</button>
+<button id="open" disabled>Abrir interface de programação</button>
+<button class="secondary" id="stop">Encerrar servidor</button>
+<button class="secondary" id="check">Verificar</button>
+</div>
+<div id="credentials">
+<label>Senha temporária do OpenCode desta sessão (não é sua chave Groq)</label>
+<div class="password"><input id="secret" readonly type="password"><button id="copy">Copiar senha</button></div>
+<p class="muted">Se a página do OpenCode pedir autenticação, use usuário <code>opencode</code> e a senha acima. A senha não é enviada ao Groq nem armazenada em arquivo pelo WMK.</p>
+</div>
+<div class="status" id="info" role="status">Pronto para conferir a instalação.</div>
+</div>
+<div class="panel">
+<h2>Como trabalhar</h2>
+<ol>
+<li>Configure uma pasta em <code>WMK_WORKSPACE</code> e inicie o WMK.</li>
+<li>Clique <strong>Iniciar OpenCode</strong> e depois <strong>Abrir interface</strong>.</li>
+<li>Escolha um provedor/modelo já configurado no OpenCode.</li>
+<li>Peça: <em>Leia index.html, app.js e style.css; corrija o código da calculadora.</em></li>
+<li>O OpenCode usará suas ferramentas reais de edição e solicitará autorização conforme a política.</li>
+<li>Volte ao Monaco e reabra o arquivo para visualizar as mudanças no disco.</li>
+</ol>
+<p class="yellow">Proteção inicial: comandos shell e acesso a diretórios externos são negados nas regras da sessão. Edições pedem aprovação. Isso não constitui sandbox de Windows: não abra projetos desconhecidos nem execute com privilégios de administrador.</p>
+</div>
+</section>
+<section class="panel"><h2>Groq e Ollama</h2><p>O OpenCode gerencia provedores separadamente. A chave cadastrada no antigo Code Studio não configura automaticamente o OpenCode. Configure o provedor pela própria interface do OpenCode. Não cole chaves no campo da tarefa.</p>
+<p class="muted">Se o OpenCode não aparecer no diagnóstico, teste <code>opencode --version</code> no PowerShell que iniciou o WMK. Algumas versões podem exigir configuração própria de provedor e autenticação.</p></section>
+</main>
+<footer>Walney Moreira Klein — walneyk@hotmail.com · WMK Desktop Bridge</footer>
+<script>
+const $=x=>document.getElementById(x);
+let openUrl=null;
+async function api(url, body){
+ const res=await fetch(url,body===undefined?{cache:'no-store'}:{
+ method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+ const d=await res.json();
+ if(!res.ok)throw Error(d.erro||('HTTP '+res.status));
+ return d;
+}
+async function refresh(){
+ try{
+  const d=await api('/api/opencode/status');
+  $('workspace').textContent=d.pasta;
+  $('installation').textContent=d.instalado?'Detectado no Windows':'Não encontrado no PATH';
+  $('running').textContent=d.ativo?'Ativo':'Parado';
+  openUrl=d.ativo?d.url:null;$('open').disabled=!openUrl;
+  $('start').disabled=!d.instalado || !d.pasta_atual_corresponde;
+  if(d.ativo&&!d.pasta_atual_corresponde)$('info').textContent='Servidor ativo com outra pasta. Encerre antes de trocar.';
+ }catch(e){$('info').textContent='Erro ao verificar: '+e.message}
+}
+$('check').onclick=refresh;
+$('start').onclick=async()=>{
+ $('start').disabled=true;$('info').textContent='Iniciando OpenCode na pasta autorizada...';
+ try{
+  const d=await api('/api/opencode/start',{confirm:true});
+  openUrl=d.url;
+  $('open').disabled=false;
+  $('secret').value=d.senha||'';
+  $('credentials').style.display='block';
+  $('info').textContent='OpenCode iniciado. Clique em Abrir interface, selecione modelo e faça sua tarefa.';
+ }catch(e){$('info').textContent='Falha: '+e.message}
+ finally{await refresh()}
+};
+$('open').onclick=()=>{if(openUrl)window.open(openUrl,'_blank','noopener,noreferrer')};
+$('stop').onclick=async()=>{
+ if(!confirm('Encerrar o servidor OpenCode iniciado pelo WMK?'))return;
+ try{const d=await api('/api/opencode/stop',{confirm:true});
+ $('credentials').style.display='none';$('secret').value='';
+ $('info').textContent=d.mensagem;await refresh()}
+ catch(e){$('info').textContent='Falha ao encerrar: '+e.message}
+};
+$('copy').onclick=async()=>{
+ try{await navigator.clipboard.writeText($('secret').value);$('info').textContent='Senha copiada para autenticação local.'}
+ catch(e){$('info').textContent='Não foi possível copiar: '+e.message}
+};
+refresh();
+</script></body></html>
