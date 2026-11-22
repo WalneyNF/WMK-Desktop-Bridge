@@ -1,11 +1,11 @@
-/* WMK Code Studio — Assistente Groq/Ollama v0.7.8.
+/* WMK Code Studio — Assistente Groq/Ollama v0.7.9.
    Não grava arquivo. Propostas precisam de revisão e salvamento manual. */
 (function () {
   const $ = id => document.getElementById(id);
-  const aside = document.querySelector('main > aside:last-child');
+  const aside = document.getElementById('ai-sidebar');
   if (!aside) return;
   const top = document.createElement('section');
-  top.style.cssText = 'padding:9px;display:grid;gap:7px;border-bottom:1px solid #36516a';
+  top.style.cssText = 'display:grid;gap:7px';
   top.innerHTML = `
     <strong>🤖 Assistente de programação</strong>
     <label for="ai-provider">Provedor</label>
@@ -33,10 +33,8 @@
     </div>
     <button type="button" id="ai-check">Verificar configuração</button>
     <button type="button" id="ai-ping">Testar resposta do provedor (sem arquivo)</button>
-    <div id="ai-provider-state" class="muted">Clique em Verificar antes de testar uma análise.</div>
-    <div id="ai-state" class="muted" role="status">A IA só recebe o conteúdo do editor; não recebe ferramentas de exclusão.</div>`;
-  const title = aside.querySelector('.panel-title');
-  title.insertAdjacentElement('afterend', top);
+`;
+  $('ai-settings-content').appendChild(top);
   const style = document.createElement('style');
   style.textContent = `
   #ai-provider,#ai-model,#ai-action,#ai-instruction{background:#0c1b2a;color:#e6f6fd;border:1px solid #355b75;border-radius:5px;padding:7px;max-width:100%;width:100%}
@@ -53,9 +51,55 @@
   overlay.id = 'ai-diff-view';
   overlay.innerHTML = '<div id="ai-diff-head"><b>Comparar: original ↔ proposta IA</b><button id="ai-apply">Colocar proposta no editor</button><button id="ai-back">Voltar sem aplicar</button></div><div id="ai-diff-editor"></div><pre id="ai-diff-fallback"></pre>';
   document.querySelector('.editor-pane').append(overlay);
-  const oldTitle = aside.querySelectorAll('.panel-title')[1];
-  if (oldTitle) oldTitle.textContent = '💡 Resposta da IA (sem salvar)';
-  $('suggestion').placeholder = 'A resposta do Groq/Ollama aparecerá aqui. O código proposto poderá ser comparado antes de entrar no editor.';
+  let responseText = '';
+  const output = $('ai-output');
+  function showResponse(text, state='done', title='Resposta recebida'){
+    responseText = text || '';
+    output.textContent = responseText || '(O modelo não retornou texto.)';
+    output.dataset.state = state;
+    $('ai-output-title').textContent = title;
+  }
+  $('ai-copy-output').onclick = async ()=>{
+    if(!responseText)return setState('Nenhuma resposta para copiar.');
+    try{await navigator.clipboard.writeText(responseText);setState('Resposta copiada.')}
+    catch(e){setState('Falha ao copiar: '+e.message)}
+  };
+  $('ai-clear-output').onclick = ()=>{
+    responseText='';
+    showResponse('Abra um arquivo, configure uma IA e solicite a análise.', 'empty','Sem análise');
+    $('ai-meta').textContent = 'Nenhuma análise recebida';
+  };
+  $('ai-open-settings').onclick = ()=>{
+    $('ai-settings').open = !$('ai-settings').open;
+    if($('ai-settings').open)$('ai-settings').scrollIntoView({block:'nearest'});
+  };
+  // O divisor só ajusta a coluna da resposta, sem deslocar o código Monaco.
+  const root = document.querySelector('main');
+  const handle = $('ai-resize-handle');
+  const storageKey = 'wmk-code-studio-ai-width-v1';
+  const stored = Number(localStorage.getItem(storageKey));
+  if(Number.isFinite(stored) && stored>=320 && stored<=900)
+    root.style.setProperty('--wmk-ai-width', stored+'px');
+  handle.addEventListener('pointerdown', e=>{
+    if(e.button!==0 || window.matchMedia('(max-width:1050px)').matches)return;
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    const initial=e.clientX;
+    const initialWidth=aside.getBoundingClientRect().width;
+    const onMove=ev=>{
+      const max=Math.max(320,root.clientWidth-520);
+      const width=Math.round(Math.max(320,Math.min(max,initialWidth+initial-ev.clientX)));
+      root.style.setProperty('--wmk-ai-width',width+'px');
+    };
+    const onEnd=()=>{
+      handle.removeEventListener('pointermove',onMove);
+      handle.removeEventListener('pointerup',onEnd);
+      const width=Math.round(aside.getBoundingClientRect().width);
+      localStorage.setItem(storageKey,String(width));
+    };
+    handle.addEventListener('pointermove',onMove);
+    handle.addEventListener('pointerup',onEnd,{once:true});
+  });
   let proposal = null, comparison = null, diffModelA = null, diffModelB = null;
   const setState = value => { $('ai-state').textContent = value; };
   async function checkProvider(){
@@ -93,6 +137,8 @@
     $('ai-compare').disabled = true;
     proposal = null;
     setState('Consultando ' + provider + ' / ' + model + ' ...');
+    showResponse('Consultando o modelo. A resposta será exibida neste painel.', 'loading', 'Analisando...');
+    $('ai-meta').textContent = path+' · '+provider+' / '+model+' · '+action;
     try {
       const response = await fetch('/api/ai/suggest', {
         method:'POST',headers:{'Content-Type':'application/json'},
@@ -100,16 +146,17 @@
       });
       const answer = await response.json();
       if (!response.ok) throw Error(answer.erro || 'HTTP ' + response.status);
-      $('suggestion').value = answer.explicacao || '(Sem explicação do modelo.)';
+      showResponse(answer.explicacao || '(Sem explicação do modelo.)', 'done', 'Análise concluída');
+      $('ai-meta').textContent = path+' · '+provider+' / '+model+' · '+action;
       if (typeof answer.codigo === 'string' && ['corrigir','refatorar','gerar'].includes(action)) {
         proposal = {path,sha,code,proposed:answer.codigo};
         $('ai-compare').disabled = false;
-        setState('Sugestão recebida. Compare com seu código antes de aplicar.');
+        setState('Código proposto. Clique em Comparar sugestão lado a lado, nas configurações.');
       } else {
-        setState('Análise recebida. Nenhuma alteração foi proposta.');
+        setState('Análise recebida. O texto completo está ao lado do Monaco.');
       }
     } catch (err) {
-      $('suggestion').value = 'Falha na consulta '+provider+' / '+model+': '+err.message;
+      showResponse('Falha na consulta '+provider+' / '+model+': '+err.message, 'error','Falha na análise');
       setState('ERRO AO ANALISAR: '+err.message+' | Use Verificar Groq / Ollama para diagnosticar.');
     } finally {
       $('ai-consent').checked = false;
@@ -203,6 +250,7 @@
   $('ai-ping').onclick = pingProvider;
   $('ai-check').onclick = checkProvider;
   checkProvider();
+  $('ai-settings').open = true;
   $('ai-compare').onclick = compare;
   $('ai-back').onclick = closeCompare;
   $('ai-apply').onclick = apply;
