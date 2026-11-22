@@ -1,25 +1,48 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WMK Code Studio v0.7.8</title>
+<title>WMK Code Studio v0.7.9</title>
 <style>
 :root{color-scheme:dark;font:14px Segoe UI,Arial;background:#0b121c;color:#e1eff7}*{box-sizing:border-box}
 body{margin:0}header{height:58px;display:flex;align-items:center;gap:12px;background:#152537;border-bottom:1px solid #33516b;padding:8px 14px}
 strong{color:#6de7ec}button,input,textarea{font:inherit}button{background:#18435a;border:1px solid #35718b;color:#e5f5fa;border-radius:5px;padding:8px 10px;cursor:pointer}button:hover{background:#28617e}button:disabled{opacity:.45;cursor:not-allowed}
 input{padding:8px;background:#091927;color:#e9f6fd;border:1px solid #3a6077;border-radius:5px}
-main{display:grid;grid-template-columns:255px minmax(300px,1fr) 320px;height:calc(100vh - 90px);gap:6px;padding:6px}
-aside,.editor-pane{background:#101f2f;border:1px solid #2b465a;border-radius:7px;min-width:0;overflow:hidden;display:flex;flex-direction:column}main > aside:last-child{overflow-y:auto}main > aside:last-child #diff{flex:0 0 auto;min-height:120px;max-height:220px}main > aside:last-child #suggestion{min-height:130px;flex-shrink:0}
+main{display:grid;grid-template-columns:220px minmax(280px,1fr) var(--wmk-ai-width,430px);height:calc(100vh - 90px);gap:6px;padding:6px}
+aside,.editor-pane{background:#101f2f;border:1px solid #2b465a;border-radius:7px;min-width:0;overflow:hidden;display:flex;flex-direction:column}main > aside:last-child{overflow:visible;position:relative}
+#ai-resize-handle{position:absolute;left:-8px;top:0;bottom:0;width:8px;cursor:col-resize;z-index:12;background:transparent;touch-action:none}
+#ai-resize-handle:hover,#ai-resize-handle:focus-visible{background:#16a7bd}
+#ai-pane{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+#ai-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 10px;background:#172c40;border-bottom:1px solid #38546a}
+#ai-output{flex:1;min-height:140px;overflow-y:auto;padding:18px;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;font:14px/1.7 "Segoe UI",sans-serif;color:#e4f1fa;background:#0b1928}
+#ai-output[data-state="empty"]{color:#9cb9c9}
+#ai-output[data-state="error"]{color:#ffb7ad}
+#ai-output[data-state="loading"]{color:#b1e9fa}
+#ai-output-title{font-size:13px;color:#70d9e8}
+#ai-meta{font-size:11px;color:#9db7cc;padding:7px 12px;border-bottom:1px solid #2a485e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ai-settings{border-top:1px solid #34536b;max-height:46%;overflow-y:auto;background:#11263a}
+#ai-settings summary{cursor:pointer;padding:10px;background:#1b3348;font-weight:600;position:sticky;top:0;z-index:1}
+#ai-settings .settings-body{padding:10px;display:grid;gap:8px}
+#ai-settings[open]{min-height:160px}
+#ai-status-strip{padding:9px 12px;border-top:1px solid #35556c;min-height:44px;display:grid;gap:5px;background:#12283b}
+#ai-provider-state,#ai-state{overflow-wrap:anywhere}
+#ai-diff-section{flex:0 0 auto;max-height:35%;overflow:auto}
+#ai-diff-section summary{padding:9px 12px;background:#1b3348;cursor:pointer}
+#ai-diff-section #diff{max-height:200px;overflow:auto}
+#ai-copy-output{margin-left:auto}
+#ai-pane button{font-size:12px}
+
 .panel-title{background:#1d3448;padding:9px 10px;font-weight:600;display:flex;gap:6px;align-items:center;justify-content:space-between}
 #tree{flex:1;overflow:auto;padding:10px}#tree button{display:block;text-align:left;width:100%;background:transparent;border:0;padding:5px;color:#d7e8f1;overflow-wrap:anywhere}#tree button:hover{background:#22465a}
 .toolbar{display:flex;gap:5px;padding:7px;flex-wrap:wrap;align-items:center}.toolbar input{flex:1;min-width:125px}
 #editor{flex:1;min-height:240px}#fallback{display:none;flex:1;width:100%;background:#101822;color:#e7f7ff;border:0;padding:15px;font:13px/1.55 Consolas,monospace;resize:none}
 #diff{flex:1;white-space:pre-wrap;overflow:auto;margin:0;padding:10px;font:12px/1.45 Consolas,monospace}
-#suggestion{height:150px;width:100%;resize:vertical;background:#0a1826;color:#ecf5f7;border:1px solid #3c6178;padding:10px}
+
 .muted{color:#9eb6c6;font-size:12px}footer{height:32px;padding:7px 15px;background:#17283a;color:#9db7c9}
 #feedback{padding:7px 10px;color:#81d9e8;border-top:1px solid #314a5b;min-height:32px}
 #close{margin-left:auto}code{color:#7bd8ef}
-@media(max-width:950px){main{grid-template-columns:1fr;height:auto}aside,.editor-pane{min-height:280px}#editor,#fallback{height:450px}#diff{height:200px}#close{margin-left:0}}
+@media(max-width:1050px){main{grid-template-columns:200px minmax(280px,1fr) minmax(320px,.85fr)}#ai-resize-handle{display:none}}
+@media(max-width:800px){header{height:auto;flex-wrap:wrap}main{grid-template-columns:minmax(0,1fr);height:auto}aside,.editor-pane{min-height:260px}#editor,#fallback{height:420px;min-height:420px}#ai-pane{height:620px}#close{margin-left:0}}
 </style></head><body>
-<header><strong>WMK Code Studio</strong> <small>v0.7.8 · Monaco</small><span id="project" class="muted">Carregando pasta...</span>
+<header><strong>WMK Code Studio</strong> <small>v0.7.9 · Monaco</small><span id="project" class="muted">Carregando pasta...</span>
 <button id="calc-demo" type="button" onclick="window.open('/exemplo/calculadora','_blank')">🧮 Testar calculadora</button><button id="close" type="button">Voltar ao painel</button></header>
 <main>
 <aside><div class="panel-title">📁 Explorador <button id="refresh" type="button">Atualizar</button></div>
@@ -30,12 +53,31 @@ aside,.editor-pane{background:#101f2f;border:1px solid #2b465a;border-radius:7px
 <button id="new">Novo</button><button id="preview">Comparar</button><button id="save">Salvar após revisão</button></div>
 <div id="editor"></div><textarea id="fallback" spellcheck="false" placeholder="Código-fonte..."></textarea>
 <div id="feedback">O arquivo só é salvo após sua confirmação explícita.</div></section>
-<aside><div class="panel-title">🔎 Revisão e IA</div>
-<p class="muted" style="padding:0 10px">Confira o diff antes de gravar. As sugestões da IA não alteram o código automaticamente.</p>
-<pre id="diff">Abra ou crie um arquivo e clique em Comparar.</pre>
-<div class="panel-title">💡 Sugestões da IA (manual)</div>
-<textarea id="suggestion" placeholder="Cole aqui sugestões do Groq/Ollama para avaliar. Esta versão não faz chamadas de IA pelo editor."></textarea>
-<div class="toolbar"><button id="copy-code">Copiar código</button><button id="copy-suggestion">Copiar sugestão</button></div>
+<aside id="ai-sidebar">
+<div id="ai-resize-handle" role="separator" tabindex="0" aria-label="Redimensionar painel de resposta" aria-orientation="vertical" title="Arraste para ajustar a largura"></div>
+<div id="ai-pane">
+  <div class="panel-title">🤖 Resposta da IA <span id="ai-output-title">Pronto para analisar</span></div>
+  <div id="ai-toolbar">
+    <button id="ai-open-settings" type="button" aria-controls="ai-settings">⚙ Configurar IA</button>
+    <button id="ai-copy-output" type="button">📋 Copiar resposta</button>
+    <button id="ai-clear-output" type="button">Limpar</button>
+  </div>
+  <div id="ai-meta">Nenhuma análise recebida</div>
+  <article id="ai-output" data-state="empty" aria-label="Texto da resposta do agente" aria-live="polite">Abra um arquivo no Monaco e clique em Configurar IA para escolher Groq/Ollama e solicitar uma revisão. A resposta aparecerá aqui, ao lado do código.</article>
+  <div id="ai-status-strip">
+    <div id="ai-provider-state" class="muted">Verificando provedores...</div>
+    <div id="ai-state" class="muted" role="status">Nenhuma operação em andamento.</div>
+  </div>
+  <details id="ai-diff-section">
+    <summary>🔎 Diferenças antes de salvar (revisão manual)</summary>
+    <pre id="diff">Abra ou crie um arquivo e clique em Comparar.</pre>
+  </details>
+  <details id="ai-settings">
+    <summary>⚙ Provedor, modelo e instruções</summary>
+    <div id="ai-settings-content" class="settings-body"></div>
+  </details>
+  <div class="toolbar"><button id="copy-code">Copiar código do Monaco</button></div>
+</div>
 </aside></main>
 <footer>Walney Moreira Klein — walneyk@hotmail.com · Licença MIT · edição local restrita</footer>
 <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
@@ -77,7 +119,7 @@ async function save(){const name=$('filename').value.trim();if(name!==currentPat
 $('new').onclick=newFile;$('preview').onclick=preview;$('save').onclick=save;$('refresh').onclick=()=>list($('subdir').value);
 $('open-folder').onclick=()=>list($('subdir').value);$('close').onclick=()=>location.assign('/');
 $('copy-code').onclick=()=>navigator.clipboard.writeText(getText()).then(()=>feedback('Código copiado.')).catch(e=>feedback(e.message));
-$('copy-suggestion').onclick=()=>navigator.clipboard.writeText($('suggestion').value).then(()=>feedback('Sugestão copiada.')).catch(e=>feedback(e.message));
+
 window.addEventListener('beforeunload',e=>{if(getText()!==savedText){e.preventDefault();e.returnValue=''}});
 if(typeof require==='function'&&typeof require.config==='function'){
  require.config({paths:{vs:'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs'}});
