@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.7.6 (Groq/Ollama revisando código e calculadora de testes)** · Interface em português do Brasil.
+> Versão: **0.7.7 (cliente HTTP Groq identificado e calculadora com CSS corrigido)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -92,6 +92,24 @@ Foi adicionado um projeto de exemplo **Calculadora WMK** em `exemplos/calculador
 **Manual de configuração e diagnóstico:** [manuais/TESTE_IA_CALCULADORA.md](manuais/TESTE_IA_CALCULADORA.md).
 
 As integrações com provedores reais ainda requerem validação no Windows do usuário. Os novos testes automatizados utilizam respostas simuladas, não consomem a API Groq nem comprovam conectividade externa.
+
+## Correções v0.7.7 — Groq 403/1010 e calculadora sem CSS
+
+A calculadora servida por `/exemplo/calculadora` estava sendo aberta sem barra final: os caminhos relativos `style.css` e `app.js` eram resolvidos fora da pasta. A página agora usa URLs absolutas e a rota sem barra final redireciona para `/exemplo/calculadora/`. O CSS recebeu visual dark neon revisado.
+
+O Groq pode devolver **403 com `error code: 1010`** devido à regra Cloudflare de assinatura do cliente HTTP. O Python `urllib.request` usa por padrão um User-Agent genérico. O WMK passou a identificar-se com um User-Agent próprio tanto no Code Studio quanto na Central de Agentes. O erro 1010 agora recebe mensagem específica, diferente de chave inválida ou modelo inexistente. **A correção é uma hipótese técnica fundamentada, não uma confirmação de que sua conexão particular foi liberada.** Se a Cloudflare persistir bloqueando, entre em contato com o suporte do Groq; não tente desativar o filtro.
+
+Teste após reiniciar o servidor:
+
+```powershell
+cd D:\Ferramentas\WMK-Desktop-Bridge
+git pull
+.\iniciar-com-chaves.ps1 -Workspace 'D:\Ferramentas\WMK-Desktop-Bridge'
+```
+
+Abra `http://127.0.0.1:8767/exemplo/calculadora/` e no Code Studio clique em **Testar resposta do provedor (sem arquivo)**. Confirme a versão `0.7.7` em `/api/status`.
+
+Documentação Cloudflare: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-1xxx-errors/error-1010/
 
 ## Instalação no Windows 10/11
 
