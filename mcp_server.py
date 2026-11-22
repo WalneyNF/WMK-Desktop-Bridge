@@ -2,6 +2,7 @@
 from mcp.server.fastmcp import FastMCP
 from bridge import diagnostic, drives, list_folder, folder_sizes, ollama_models
 from hardware import hardware_info
+from powershell_tools import catalog, run_action
 
 mcp = FastMCP("WMK Desktop Bridge")
 
@@ -40,6 +41,18 @@ def wmk_ollama_models() -> dict:
 def wmk_hardware() -> dict:
     """Inventário de CPU, RAM, vídeo, rede, placa-mãe e discos físicos (somente leitura)."""
     return hardware_info()
+
+
+@mcp.tool()
+def wmk_powershell_catalog() -> list[dict]:
+    """Listar diagnósticos PowerShell permitidos; scripts são fixos, somente leitura."""
+    return catalog()
+
+
+@mcp.tool()
+def wmk_powershell_diagnose(action: str) -> dict:
+    """Executar uma ação pré-definida pelo ID; não recebe código PowerShell livre."""
+    return run_action(action)
 
 
 if __name__ == "__main__":
