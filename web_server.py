@@ -38,7 +38,14 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply({"erro": "Origem não autorizada"}, 403)
         route = urlparse(self.path).path
         try:
-            if route in ("/exemplo/calculadora", "/exemplo/calculadora/",
+            if route == "/exemplo/calculadora":
+                self.send_response(308)
+                self.send_header("Location", "/exemplo/calculadora/")
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            if route in ("/exemplo/calculadora/",
                          "/exemplo/calculadora/style.css", "/exemplo/calculadora/app.js"):
                 filename = "index.html" if route in (
                     "/exemplo/calculadora", "/exemplo/calculadora/") else route.rsplit("/",1)[-1]
