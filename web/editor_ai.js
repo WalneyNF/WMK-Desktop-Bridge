@@ -148,6 +148,8 @@
       if (!response.ok) throw Error(answer.erro || 'HTTP ' + response.status);
       showResponse(answer.explicacao || '(Sem explicação do modelo.)', 'done', 'Análise concluída');
       $('ai-meta').textContent = path+' · '+provider+' / '+model+' · '+action;
+      $('ai-settings').open = false;
+      output.scrollTop = 0;
       if (typeof answer.codigo === 'string' && ['corrigir','refatorar','gerar'].includes(action)) {
         proposal = {path,sha,code,proposed:answer.codigo};
         $('ai-compare').disabled = false;
@@ -157,6 +159,7 @@
       }
     } catch (err) {
       showResponse('Falha na consulta '+provider+' / '+model+': '+err.message, 'error','Falha na análise');
+      $('ai-settings').open = true;
       setState('ERRO AO ANALISAR: '+err.message+' | Use Verificar Groq / Ollama para diagnosticar.');
     } finally {
       $('ai-consent').checked = false;
