@@ -18,6 +18,7 @@ from media_lab import image_info, vision_ollama, model_info
 from mcp_approvals import list_pending, get_proposal, approve, reject
 from coding_agent import coding_task
 from project_agent import project_task
+from opencode_bridge import state as opencode_state, start as opencode_start, stop as opencode_stop
 from credential_store import save as save_credential, status as credential_status
 
 HOST, PORT = "127.0.0.1", 8767
@@ -27,6 +28,7 @@ EDITOR_AI = Path(__file__).parent / "web" / "editor_ai.js"
 AGENTS_HTML = Path(__file__).parent / "web" / "agents.html"
 MEDIA_HTML = Path(__file__).parent / "web" / "media.html"
 APPROVALS_HTML = Path(__file__).parent / "web" / "approvals.html"
+CODER_HTML = Path(__file__).parent / "web" / "coder.html"
 CALC_DIR = Path(__file__).parent / "exemplos" / "calculadora"
 
 
@@ -84,9 +86,9 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
                 return
-            if route in ("/", "/editor", "/agents", "/media", "/approvals"):
+            if route in ("/", "/editor", "/agents", "/media", "/approvals", "/coder"):
                 is_editor = route == "/editor"
-                data = (EDITOR if is_editor else (AGENTS_HTML if route == "/agents" else (MEDIA_HTML if route == "/media" else (APPROVALS_HTML if route == "/approvals" else DASHBOARD)))).read_bytes()
+                data = (EDITOR if is_editor else (AGENTS_HTML if route == "/agents" else (MEDIA_HTML if route == "/media" else (APPROVALS_HTML if route == "/approvals" else (CODER_HTML if route == "/coder" else DASHBOARD))))).read_bytes()
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Cache-Control", "no-store")
@@ -98,6 +100,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
                 return
+            if route == "/api/opencode/status":
+                return self.reply(opencode_state())
             if route == "/api/mcp/pending":
                 return self.reply(list_pending())
             if route == "/api/mcp/proposal":
@@ -150,7 +154,7 @@ class Handler(BaseHTTPRequestHandler):
         if host not in (f"127.0.0.1:{PORT}", f"localhost:{PORT}") or origin not in allowed:
             return self.reply({"erro": "Origem não autorizada"}, 403)
         route = urlparse(self.path).path
-        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest", "/api/agents/register", "/api/agents/propose", "/api/agents/ask", "/api/blender/approve", "/api/skills/save", "/api/media/info", "/api/media/vision", "/api/agents/chat", "/api/mcp/approve", "/api/mcp/reject", "/api/coding/task", "/api/ai/test", "/api/credentials/save", "/api/coding/project"):
+        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest", "/api/agents/register", "/api/agents/propose", "/api/agents/ask", "/api/blender/approve", "/api/skills/save", "/api/media/info", "/api/media/vision", "/api/agents/chat", "/api/mcp/approve", "/api/mcp/reject", "/api/coding/task", "/api/ai/test", "/api/credentials/save", "/api/coding/project", "/api/opencode/start", "/api/opencode/stop"):
             return self.reply({"erro": "Rota desconhecida"}, 404)
         if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
             return self.reply({"erro": "Content-Type deve ser application/json"}, 415)
@@ -161,6 +165,14 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(size))
             if not isinstance(data, dict):
                 return self.reply({"erro": "JSON inválido"}, 400)
+            if route == "/api/opencode/start":
+                if data.get("confirm") is not True:
+                    return self.reply({"erro":"Confirme a abertura do OpenCode"},403)
+                return self.reply(opencode_start())
+            if route == "/api/opencode/stop":
+                if data.get("confirm") is not True:
+                    return self.reply({"erro":"Confirme a parada do OpenCode"},403)
+                return self.reply(opencode_stop())
             if route == "/api/credentials/save":
                 return self.reply(save_credential(data.get("name"), data.get("value")))
             if route == "/api/ai/test":
