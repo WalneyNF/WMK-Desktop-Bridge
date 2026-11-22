@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.4.0 (protótipo local, somente leitura)** · Interface em português do Brasil.
+> Versão: **0.5.0 (protótipo local, com editor manual protegido)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -22,10 +22,12 @@ Criar uma alternativa independente para diagnósticos locais de disco e arquivos
 | Copiar inventário e exportar relatórios TXT/JSON | ✅ |
 | Agente experimental Groq com ferramentas de leitura permitidas | ✅ |
 | Servidor MCP local via stdio | ✅ |
+| Pasta única autorizada para agentes (somente leitura) | ✅ |
+| Monaco Code Studio, diff, hash e backup para edição manual | ✅ Protótipo |
 | Painel HTML local com painéis móveis, redimensionáveis e layout persistente | ✅ |
 | Executar diagnósticos PowerShell fixos por IA (Groq/MCP) | ✅ Com restrições |
 | Executar PowerShell arbitrário pela IA | ❌ Não permitido |
-| Excluir arquivos pela IA | ❌ Não implementado |
+| Excluir arquivos pela IA | 🔒 Bloqueado: nenhuma ferramenta de exclusão |
 | Controle remoto pelo ChatGPT web | ❌ Não implementado |
 
 ## Instalação no Windows 10/11
@@ -163,6 +165,24 @@ Os scripts são constantes versionadas no código, usam PowerShell sem perfil, t
 
 Rotas locais: `GET /api/powershell/catalog` e `POST /api/powershell/diagnose` com corpo JSON `{"action":"processos"}`. A rota POST exige Origin local e ação previamente cadastrada. Não expose a porta 8767 na internet.
 
+## Editor Monaco e modo pasta protegida — v0.5.0
+
+O projeto agora oferece **WMK Code Studio** em `http://127.0.0.1:8767/editor`, com explorador da pasta autorizada, editor Monaco (carregado de CDN), criação manual de arquivos de código, comparação de alterações (diff), detecção de conflitos por hash SHA-256 e backups ao salvar.
+
+Para ativar a pasta única, **pare o servidor atual** e reinicie com:
+
+```powershell
+cd D:\Ferramentas\WMK-Desktop-Bridge
+$env:WMK_WORKSPACE = 'D:\Ferramentas\MeuProjeto'
+py web_server.py
+```
+
+No modo restrito, as ferramentas Groq de arquivos enxergam apenas a pasta autorizada. Ferramentas de diagnóstico genérico de sistema, processos, hardware, discos, Ollama e PowerShell ficam bloqueadas neste modo. **A IA não recebe ferramentas de gravação ou exclusão.** O botão de salvar é operação humana no editor web e não deve ser confundido com isolamento de sistema operacional.
+
+Para entender as restrições, riscos e testes: [manuais/FERRAMENTAS_SEGURAS.md](manuais/FERRAMENTAS_SEGURAS.md) e [manuais/SEGURANCA_AGENTES.md](manuais/SEGURANCA_AGENTES.md).
+
+**Atenção:** a interface do Monaco depende da CDN do jsDelivr e portanto necessita internet para carregar esse editor. Quando indisponível, há um campo de texto alternativo. O programa ainda não passou por auditoria de segurança ou testes completos em Windows de terceiros. Evite abrir projetos que contenham segredos e não exponha a porta 8767 na rede.
+
 ## Segurança
 
 - Todas as ferramentas são **somente leitura**.
@@ -178,12 +198,16 @@ Rotas locais: `GET /api/powershell/catalog` e `POST /api/powershell/diagnose` co
 ```text
 WMK-Desktop-Bridge/
 ├── bridge.py                # núcleo de leitura e diagnóstico
+├── security_policy.py       # perfis de segurança
+├── workspace.py             # isolamento lógico de arquivos de projetos
+├── editor_backend.py        # leitura, diff, hash e gravação humana
 ├── agente_groq.py            # agente experimental Groq com tool calling
 ├── powershell_tools.py       # executor de diagnósticos PowerShell permitidos
 ├── hardware.py              # inventário de hardware via CIM
 ├── mcp_server.py            # oito ferramentas MCP via stdio
 ├── web_server.py            # API/painel local HTTP
 ├── web/index.html           # painel com janelas móveis
+├── web/editor.html          # Monaco Code Studio
 ├── iniciar-painel.bat
 ├── iniciar-mcp.bat
 ├── requirements.txt
@@ -197,7 +221,7 @@ WMK-Desktop-Bridge/
 
 - **v0.3.1:** inventário e exportação TXT/JSON implementados, exemplo de agente Groq incluído; análise de caches e testes automatizados ainda pendentes.
 - **v0.4.0:** diagnósticos PowerShell com lista fechada, confirmações no painel e Groq, logs e timeout; operações de escrita continuam pendentes.
-- **v0.5:** catálogo ampliado, aprovações de operações de escrita, restauração e permissões específicas por agente.
+- **v0.5.0:** Monaco Code Studio e pasta única implementados como protótipo; aprovação centralizada segura para agentes e testes em Windows ainda pendentes.
 - **v0.6:** agente remoto autenticado, transporte seguro e integração documentada com clientes compatíveis.
 
 ## Contribuições
