@@ -22,6 +22,7 @@ jobs = Queue(maxsize=12)
 server = None
 thread = None
 timer_active = False
+active_token = ""
 VALID_TYPES = {"list_objects", "create_cube", "create_uv_sphere", "create_cylinder", "set_color"}
 
 
@@ -86,7 +87,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path != "/action":
             return self.send_json(404, {"error": "Not found"})
-        token = bpy.context.scene.wmk_bridge_token if bpy.context.scene else ""
+        token = active_token
         # O servidor sempre exige token; consulte propriedades no Blender.
         import hmac
         if not token or not hmac.compare_digest(self.headers.get("Authorization", ""), "Bearer " + token):
@@ -144,7 +145,7 @@ class WMK_OT_start(Operator):
     bl_label = "Iniciar ponte local"
 
     def execute(self, context):
-        global server, thread, timer_active
+        global server, thread, timer_active, active_token
         if server:
             self.report({"INFO"}, "WMK Bridge já está ativo")
             return {"FINISHED"}
@@ -152,6 +153,7 @@ class WMK_OT_start(Operator):
             self.report({"ERROR"}, "Configure token de pelo menos 16 caracteres")
             return {"CANCELLED"}
         try:
+            active_token = context.scene.wmk_bridge_token
             server = HTTPServer(("127.0.0.1", PORT), Handler)
             thread = Thread(target=server.serve_forever, daemon=True)
             timer_active = True
@@ -171,8 +173,9 @@ class WMK_OT_stop(Operator):
     bl_label = "Parar ponte"
 
     def execute(self, context):
-        global server, timer_active
+        global server, timer_active, active_token
         timer_active = False
+        active_token = ""
         if server:
             server.shutdown()
             server.server_close()
