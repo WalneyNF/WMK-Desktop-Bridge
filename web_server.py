@@ -11,11 +11,14 @@ from powershell_tools import catalog, run_action
 from workspace import workspace_status
 from editor_backend import list_files, open_file, proposal, save_file
 from code_ai import ai_status, suggest_code
+from agent_hub import list_agents, register_agent, providers_status, propose
+from blender_client import status as blender_status, list_objects as blender_objects, execute_approved
 
 HOST, PORT = "127.0.0.1", 8767
 DASHBOARD = Path(__file__).parent / "web" / "index.html"
 EDITOR = Path(__file__).parent / "web" / "editor.html"
 EDITOR_AI = Path(__file__).parent / "web" / "editor_ai.js"
+AGENTS_HTML = Path(__file__).parent / "web" / "agents.html"
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -38,9 +41,9 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
                 return
-            if route in ("/", "/editor"):
+            if route in ("/", "/editor", "/agents"):
                 is_editor = route == "/editor"
-                data = (EDITOR if is_editor else DASHBOARD).read_bytes()
+                data = (EDITOR if is_editor else (AGENTS_HTML if route == "/agents" else DASHBOARD)).read_bytes()
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Cache-Control", "no-store")
@@ -52,6 +55,14 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
                 return
+            if route == "/api/agents":
+                return self.reply(list_agents())
+            if route == "/api/providers":
+                return self.reply(providers_status())
+            if route == "/api/blender/status":
+                return self.reply(blender_status())
+            if route == "/api/blender/objects":
+                return self.reply(blender_objects())
             if route == "/api/ai/status":
                 return self.reply(ai_status())
             if route == "/api/workspace/status":
@@ -87,17 +98,25 @@ class Handler(BaseHTTPRequestHandler):
         if host not in (f"127.0.0.1:{PORT}", f"localhost:{PORT}") or origin not in allowed:
             return self.reply({"erro": "Origem não autorizada"}, 403)
         route = urlparse(self.path).path
-        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest"):
+        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest", "/api/agents/register", "/api/agents/propose", "/api/blender/approve"):
             return self.reply({"erro": "Rota desconhecida"}, 404)
         if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
             return self.reply({"erro": "Content-Type deve ser application/json"}, 415)
         try:
             size = int(self.headers.get("Content-Length", "0"))
-            if not 1 <= size <= (110000 if route == "/api/ai/suggest" else (550000 if route.startswith("/api/editor/") else 1024)):
+            if not 1 <= size <= (110000 if route == "/api/ai/suggest" else (550000 if route.startswith("/api/editor/") else 12000)):
                 return self.reply({"erro": "Requisição muito grande"}, 413)
             data = json.loads(self.rfile.read(size))
             if not isinstance(data, dict):
                 return self.reply({"erro": "JSON inválido"}, 400)
+            if route == "/api/agents/register":
+                return self.reply(register_agent(data))
+            if route == "/api/agents/propose":
+                return self.reply(propose(data.get("agent_id"), data.get("task")))
+            if route == "/api/blender/approve":
+                if not isinstance(data.get("proposta"), str):
+                    return self.reply({"erro": "Identificador de proposta inválido"}, 400)
+                return self.reply(execute_approved(data["proposta"]))
             if route == "/api/ai/suggest":
                 return self.reply(suggest_code(data))
             if route == "/api/powershell/diagnose":
@@ -112,7 +131,7 @@ class Handler(BaseHTTPRequestHandler):
             if route == "/api/editor/preview":
                 return self.reply(proposal(data["path"], data["content"], sha))
             return self.reply(save_file(data["path"], data["content"], sha))
-        except (ValueError, OSError, PermissionError, RuntimeError, UnicodeError) as exc:
+        except (ValueError, OSError, PermissionError, RuntimeError, UnicodeError, KeyError) as exc:
             return self.reply({"erro": str(exc)}, 400)
 
     def reply(self, obj, status=200):
