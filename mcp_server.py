@@ -1,6 +1,7 @@
 """Servidor MCP local via stdio. Sem acesso remoto e sem comandos arbitrários."""
 from mcp.server.fastmcp import FastMCP
 from bridge import diagnostic, drives, list_folder, folder_sizes, ollama_models
+from hardware import hardware_info
 
 mcp = FastMCP("WMK Desktop Bridge")
 
@@ -33,6 +34,12 @@ def wmk_folder_sizes(path: str, limit: int = 20) -> dict:
 def wmk_ollama_models() -> dict:
     """Consultar os modelos do Ollama sem instalar nem remover modelos."""
     return ollama_models()
+
+
+@mcp.tool()
+def wmk_hardware() -> dict:
+    """Inventário de CPU, RAM, vídeo, rede, placa-mãe e discos físicos (somente leitura)."""
+    return hardware_info()
 
 
 if __name__ == "__main__":
