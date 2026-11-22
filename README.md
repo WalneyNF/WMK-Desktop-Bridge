@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.8.0 (respostas IA renderizadas em Markdown seguro)** · Interface em português do Brasil.
+> Versão: **0.8.1 (agente de projeto lê múltiplos arquivos e prepara modificações reais)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -152,6 +152,16 @@ A análise Groq/Ollama não é mais mostrada com asteriscos, tabelas e marcaçõ
 Para testar no Windows, atualize via `git pull`, **pare e reinicie** `web_server.py`, abra `http://127.0.0.1:8767/editor`, pressione `Ctrl+F5` e faça a revisão de `exemplos/calculadora/index.html` ou `app.js`. A resposta anterior não é restaurada após atualizar; solicite uma análise nova.
 
 O parser é intencionalmente limitado ao Markdown mais comum. HTML embutido, extensões específicas como Mermaid, matemática LaTeX e tabelas malformadas continuam como texto normal. As formatações só funcionam se o modelo retornar Markdown minimamente válido.
+
+## Novo: trabalhar nos arquivos do projeto pelo Code Studio (v0.8.1)
+
+**Há dois modos diferentes**: o botão `Analisar arquivo com IA` apenas revisa o código que estiver aberto; ele NÃO grava alterações. Para o agente efetivamente consultar outros arquivos e editar o projeto, abra `/editor` e clique **🛠 Trabalhar no projeto**.
+
+O agente lê automaticamente o arquivo aberto e até quatro arquivos relacionados da mesma pasta (por exemplo `index.html`, `style.css`, `app.js`), enviados ao provedor selecionado apenas após consentimento. Ele produz patches exatos ou novas versões de arquivos. O WMK valida se cada trecho original existe, prepara uma proposta e exibe o diff. Clique **Revisar e aplicar** e então **Aprovar e gravar este arquivo** para modificar os arquivos no disco com backup. **Nenhum arquivo é modificado apenas pela resposta da IA.**
+
+As propostas podem ser verificadas em `/approvals`. Um relatório que diga "corrigimos" sem patches é mostrado como **zero alterações**. O aplicativo não executa builds, testes, shell ou comandos do projeto; não se deve compará-lo ainda à autonomia completa de Codex.
+
+**Manual e procedimento de teste:** [manuais/AGENTE_PROJETO_MONACO.md](manuais/AGENTE_PROJETO_MONACO.md).
 
 ## Instalação no Windows 10/11
 
