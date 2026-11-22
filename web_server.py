@@ -15,6 +15,7 @@ from agent_hub import list_agents, register_agent, providers_status, propose, as
 from blender_client import status as blender_status, list_objects as blender_objects, execute_approved
 from skills_manager import list_skills, save_skill
 from media_lab import image_info, vision_ollama, model_info
+from mcp_approvals import list_pending, get_proposal, approve, reject
 
 HOST, PORT = "127.0.0.1", 8767
 DASHBOARD = Path(__file__).parent / "web" / "index.html"
@@ -22,6 +23,7 @@ EDITOR = Path(__file__).parent / "web" / "editor.html"
 EDITOR_AI = Path(__file__).parent / "web" / "editor_ai.js"
 AGENTS_HTML = Path(__file__).parent / "web" / "agents.html"
 MEDIA_HTML = Path(__file__).parent / "web" / "media.html"
+APPROVALS_HTML = Path(__file__).parent / "web" / "approvals.html"
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -44,9 +46,9 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
                 return
-            if route in ("/", "/editor", "/agents", "/media"):
+            if route in ("/", "/editor", "/agents", "/media", "/approvals"):
                 is_editor = route == "/editor"
-                data = (EDITOR if is_editor else (AGENTS_HTML if route == "/agents" else (MEDIA_HTML if route == "/media" else DASHBOARD))).read_bytes()
+                data = (EDITOR if is_editor else (AGENTS_HTML if route == "/agents" else (MEDIA_HTML if route == "/media" else (APPROVALS_HTML if route == "/approvals" else DASHBOARD)))).read_bytes()
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Cache-Control", "no-store")
@@ -58,6 +60,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
                 return
+            if route == "/api/mcp/pending":
+                return self.reply(list_pending())
+            if route == "/api/mcp/proposal":
+                args = parse_qs(urlparse(self.path).query)
+                return self.reply(get_proposal(args.get("id", [""])[0]))
             if route == "/api/skills":
                 return self.reply(list_skills())
             if route == "/api/agents":
@@ -103,7 +110,7 @@ class Handler(BaseHTTPRequestHandler):
         if host not in (f"127.0.0.1:{PORT}", f"localhost:{PORT}") or origin not in allowed:
             return self.reply({"erro": "Origem não autorizada"}, 403)
         route = urlparse(self.path).path
-        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest", "/api/agents/register", "/api/agents/propose", "/api/agents/ask", "/api/blender/approve", "/api/skills/save", "/api/media/info", "/api/media/vision", "/api/agents/chat"):
+        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest", "/api/agents/register", "/api/agents/propose", "/api/agents/ask", "/api/blender/approve", "/api/skills/save", "/api/media/info", "/api/media/vision", "/api/agents/chat", "/api/mcp/approve", "/api/mcp/reject"):
             return self.reply({"erro": "Rota desconhecida"}, 404)
         if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
             return self.reply({"erro": "Content-Type deve ser application/json"}, 415)
@@ -114,6 +121,10 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(size))
             if not isinstance(data, dict):
                 return self.reply({"erro": "JSON inválido"}, 400)
+            if route == "/api/mcp/approve":
+                return self.reply(approve(data.get("id"),data.get("sha256")))
+            if route == "/api/mcp/reject":
+                return self.reply(reject(data.get("id")))
             if route == "/api/skills/save":
                 return self.reply(save_skill(data))
             if route == "/api/media/info":
