@@ -4,6 +4,7 @@ Não contém LLM nem sistema de patches substituto: os agentes/edições pertenc
 ao OpenCode. Regras de aplicação não substituem sandbox/ACL de Windows.
 """
 from __future__ import annotations
+import atexit
 import json
 import os
 from pathlib import Path
@@ -123,9 +124,16 @@ def start() -> dict:
         })
         logs = config.parent / "wmk-opencode-runtime.log"
         LOG = logs.open("ab", buffering=0)
+        command = [exe, "serve", "--hostname", "127.0.0.1", "--port", str(PORT)]
+        # NPM no Windows pode publicar 'opencode.cmd'; Python não o executa
+        # diretamente como um .exe. Somente o caminho já resolvido pelo PATH
+        # é passado ao cmd.exe. Nenhum texto do usuário vira comando.
+        if os.name == "nt" and Path(exe).suffix.lower() in (".cmd", ".bat"):
+            command = [os.environ.get("ComSpec", r"C:\\Windows\\System32\\cmd.exe"),
+                       "/d", "/s", "/c", subprocess.list2cmdline(command)]
         try:
             PROCESS = subprocess.Popen(
-                [exe, "serve", "--hostname", "127.0.0.1", "--port", str(PORT)],
+                command,
                 cwd=str(root), env=env, stdin=subprocess.DEVNULL,
                 stdout=LOG, stderr=subprocess.STDOUT,
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
@@ -178,3 +186,6 @@ def stop() -> dict:
             LOG.close()
             LOG = None
         return {"ativo": False, "mensagem": "Servidor OpenCode iniciado pelo WMK encerrado"}
+
+
+atexit.register(stop)
