@@ -1,4 +1,4 @@
-/* WMK Code Studio — Assistente Groq/Ollama v0.7.9.
+/* WMK Code Studio — Assistente Groq/Ollama v0.8.0.
    Não grava arquivo. Propostas precisam de revisão e salvamento manual. */
 (function () {
   const $ = id => document.getElementById(id);
@@ -54,10 +54,19 @@
   let responseText = '';
   const output = $('ai-output');
   function showResponse(text, state='done', title='Resposta recebida'){
-    responseText = text || '';
-    output.textContent = responseText || '(O modelo não retornou texto.)';
+    responseText = String(text || '');
     output.dataset.state = state;
     $('ai-output-title').textContent = title;
+    if(state === 'done' && window.WMKMarkdown && typeof WMKMarkdown.render === 'function'){
+      const article = document.createElement('div');
+      article.className = 'wmk-md-content';
+      WMKMarkdown.render(article, responseText || '(O modelo não retornou texto.)');
+      output.replaceChildren(article);
+    }else{
+      // Estados de carregamento/erro e fallback nunca interpretam HTML vindo da IA.
+      output.textContent = responseText || '(O modelo não retornou texto.)';
+    }
+    output.scrollTop = 0;
   }
   $('ai-copy-output').onclick = async ()=>{
     if(!responseText)return setState('Nenhuma resposta para copiar.');
