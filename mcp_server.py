@@ -5,6 +5,7 @@ from hardware import hardware_info
 from powershell_tools import catalog, run_action
 from workspace import workspace_status, list_workspace, read_workspace
 from blender_client import status as blender_status, list_objects as blender_list_objects
+from mcp_approvals import propose_write, proposal_status
 
 mcp = FastMCP("WMK Desktop Bridge")
 
@@ -83,6 +84,20 @@ def wmk_blender_status() -> dict:
 def wmk_blender_list() -> dict:
     """Listar objetos da cena Blender local, exige token e não altera objetos."""
     return blender_list_objects()
+
+@mcp.tool()
+def wmk_workspace_propose_write(relative: str, content: str, description: str = "") -> dict:
+    """PROPOR criação/edição de um arquivo relativo da pasta autorizada.
+    Não grava no projeto: o usuário precisa revisar diff e aprovar no painel /approvals.
+    Nenhuma exclusão nem execução de programas é disponibilizada.
+    """
+    return propose_write(relative, content, description)
+
+
+@mcp.tool()
+def wmk_workspace_proposal_status(proposal_id: str) -> dict:
+    """Consultar se a proposta de código aguarda aprovação, foi aprovada ou recusada."""
+    return proposal_status(proposal_id)
 
 
 if __name__ == "__main__":
