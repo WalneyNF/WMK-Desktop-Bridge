@@ -11,3 +11,8 @@ logs/
 # Cadastros locais do usuário (não versionar)
 config/agents.json
 config/*.tmp
+
+# Propostas MCP com conteúdo de código privado
+config/mcp_proposals.sqlite3
+config/mcp_proposals.sqlite3-wal
+config/mcp_proposals.sqlite3-shm
