@@ -1,4 +1,4 @@
-/* WMK Code Studio — Assistente Groq/Ollama v0.8.1.
+/* WMK Code Studio — Assistente Groq/Ollama v0.8.2.
    Não grava arquivo. Propostas precisam de revisão e salvamento manual. */
 (function () {
   const $ = id => document.getElementById(id);
