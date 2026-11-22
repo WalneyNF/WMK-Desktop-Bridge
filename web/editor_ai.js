@@ -1,4 +1,4 @@
-/* WMK Code Studio — Assistente Groq/Ollama v0.8.0.
+/* WMK Code Studio — Assistente Groq/Ollama v0.8.1.
    Não grava arquivo. Propostas precisam de revisão e salvamento manual. */
 (function () {
   const $ = id => document.getElementById(id);
@@ -84,6 +84,112 @@
     document.body.append(link);link.click();link.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
     setState('Arquivo Markdown disponibilizado pelo navegador: '+filename);
+  };
+  $('ai-open-project').onclick=()=>{
+    $('ai-project-panel').open=true;
+    $('ai-settings').open=true;
+    $('ai-project-panel').scrollIntoView({block:'nearest'});
+  };
+  let projectProposals=[];
+  async function projectCall(route,body){
+    const response=await fetch(route,body===undefined?{cache:'no-store'}:
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const data=await response.json();
+    if(!response.ok)throw Error(data.erro||('HTTP '+response.status));
+    return data;
+  }
+  async function reviewProposal(item){
+    const status=$('ai-project-status');
+    try{
+      const review=await projectCall('/api/mcp/proposal?id='+encodeURIComponent(item.id));
+      showResponse('## Alteração proposta: \\u0060'+review.arquivo+'\\u0060\\n\\n'+
+        '### Motivo\\n'+(item.motivo||'Alteração preparada pela IA')+
+        '\\n\\n### Diferenças (linhas removidas e adicionadas)\\n\\n'+
+        '\\u0060\\u0060\\u0060diff\\n'+review.diff+'\\n\\u0060\\u0060\\u0060',
+        'done','Proposta de alteração');
+      $('ai-meta').textContent=review.arquivo+' · aguardando aprovação humana';
+      $('ai-settings').open=false;
+      $('ai-project-panel').open=true;
+      let confirmButton=$('ai-approve-file');
+      if(!confirmButton){
+        confirmButton=document.createElement('button');
+        confirmButton.id='ai-approve-file';
+        confirmButton.type='button';
+        confirmButton.textContent='✓ Aprovar e gravar este arquivo';
+        $('ai-toolbar').append(confirmButton);
+      }
+      confirmButton.hidden=false;
+      confirmButton.onclick=async()=>{
+        if(!confirm('Confirma GRAVAR '+review.arquivo+' na pasta autorizada? Uma cópia de segurança será criada quando aplicável.'))return;
+        confirmButton.disabled=true;
+        try{
+          const saved=await projectCall('/api/mcp/approve',{id:review.id,sha256:review.sha256});
+          status.textContent='Arquivo realmente gravado: '+review.arquivo+
+            '. Backup: '+(saved.backup||'arquivo novo')+'.';
+          confirmButton.hidden=true;
+          projectProposals=projectProposals.filter(x=>x.id!==review.id);
+          drawProposals();
+          // Reabrir o arquivo no Monaco, sem descartar edições humanas pendentes.
+          if(currentPath===review.arquivo && getText()===savedText){
+            await openFile(review.arquivo);
+          }
+          setState('Alteração aplicada ao arquivo no disco. Nenhum comando foi executado.');
+        }catch(e){status.textContent='Não foi possível gravar: '+e.message;}
+        finally{confirmButton.disabled=false;}
+      };
+      status.textContent='Revise o diff completo no painel. Nenhum arquivo foi modificado ainda.';
+    }catch(e){status.textContent='Erro ao abrir proposta: '+e.message;}
+  }
+  function drawProposals(){
+    const area=$('ai-project-proposals');
+    area.replaceChildren();
+    projectProposals.forEach(item=>{
+      const button=document.createElement('button');
+      button.type='button';
+      button.textContent='📄 Revisar e aplicar: '+item.arquivo;
+      button.onclick=()=>reviewProposal(item);
+      area.append(button);
+    });
+    if(!projectProposals.length)area.textContent='Nenhuma proposta pendente nesta tarefa.';
+  }
+  $('ai-project-run').onclick=async()=>{
+    const button=$('ai-project-run'), task=$('ai-project-task').value.trim();
+    const provider=$('ai-provider').value,model=$('ai-model').value.trim();
+    const status=$('ai-project-status');
+    if(!currentPath)return status.textContent='Abra primeiro um arquivo do projeto no Monaco.';
+    if(!$('ai-project-consent').checked)return status.textContent='Autorize a leitura dos arquivos relacionados.';
+    if(task.length<10)return status.textContent='Descreva a tarefa com mais detalhes.';
+    if(!confirm('A IA poderá consultar o arquivo aberto e outros arquivos relacionados da mesma pasta, enviando seu conteúdo a '+provider+'. Continuar?'))return;
+    button.disabled=true;
+    projectProposals=[];
+    drawProposals();
+    status.textContent='Explorando o projeto, lendo arquivos relacionados e preparando alterações...';
+    showResponse('Agente trabalhando: lendo arquivos do projeto e preparando propostas de código. Nenhum arquivo será gravado antes da aprovação.', 'loading', 'Agente trabalhando');
+    const oldApprove=$('ai-approve-file');if(oldApprove)oldApprove.hidden=true;
+    try{
+      const result=await projectCall('/api/coding/project',{
+        path:currentPath,task,provider,model,consent:true
+      });
+      projectProposals=result.propostas||[];
+      drawProposals();
+      $('ai-project-files').textContent='Arquivos realmente lidos: '+(result.arquivos_lidos||[]).join(', ');
+      const report='## Resultado da tarefa\\n\\n'+(result.resumo||'Nenhum resumo recebido')+
+        '\\n\\n**Arquivos lidos:** '+(result.arquivos_lidos||[]).join(', ')+
+        '\\n\\n**Alterações preparadas:** '+projectProposals.length+
+        '\\n\\n**Arquivos gravados no disco:** 0\\n\\n'+
+        (projectProposals.length?'Abra uma proposta abaixo, confira as diferenças e clique em **Aprovar e gravar este arquivo**.':'Não há alterações concretas para aplicar.');
+      showResponse(report,'done','Tarefa planejada');
+      $('ai-settings').open=false;
+      status.textContent=projectProposals.length?
+        projectProposals.length+' proposta(s) aguardando sua revisão. Ainda não foram gravadas.':
+        'A IA não preparou mudanças. Nenhum arquivo foi alterado.';
+    }catch(e){
+      showResponse('Falha ao executar tarefa: '+e.message,'error','Falha na tarefa');
+      status.textContent='Erro: '+e.message;
+    }finally{
+      button.disabled=false;
+      $('ai-project-consent').checked=false;
+    }
   };
   $('ai-clear-output').onclick = ()=>{
     responseText='';
