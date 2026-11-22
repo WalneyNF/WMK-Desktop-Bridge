@@ -95,7 +95,13 @@ def register_agent(data: dict) -> dict:
     return obj
 
 
-def _request(provider: str, model: str, system: str, question: str) -> str:
+def _request(provider: str, model: str, system: str, question: str, *,
+             json_mode: bool = True, max_completion_tokens: int = 8192) -> str:
+    """Consulta o provedor. O modo livre é usado em patches grandes do agente.
+
+    JSON Mode do Groq pode recusar a geração inteira (json_validate_failed)
+    quando o esquema fica complexo. O WMK valida o JSON LOCALMENTE.
+    """
     env, url, _ = PROVIDERS[provider]
     token = get_credential(env) if env else ""
     if env and not token:
@@ -106,17 +112,27 @@ def _request(provider: str, model: str, system: str, question: str) -> str:
     if token:
         headers["Authorization"] = f"Bearer {token}"
     if provider == "ollama":
-        body = {"model": model, "messages": messages, "stream": False, "format": "json",
-                "options": {"temperature": 0.1}}
+        body = {"model": model, "messages": messages, "stream": False,
+                "options": {"temperature": 0.1, "num_predict": max(256, min(int(max_completion_tokens), 8192))}}
+        if json_mode:
+            body["format"] = "json"
     else:
         body = {"model": model, "messages": messages, "temperature": 0.1,
-                "response_format": {"type": "json_object"}}
+                "max_completion_tokens": max(256, min(int(max_completion_tokens), 8192))}
+        if json_mode:
+            body["response_format"] = {"type": "json_object"}
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=85) as res:
             result = json.load(res)
     except urllib.error.HTTPError as exc:
         detail = exc.read(600).decode(errors="replace")
+        if exc.code == 400 and "json_validate_failed" in detail.lower():
+            raise ValueError(
+                f"{provider}: modo JSON rígido recusou a geração. "
+                "Use uma tarefa menor; para tarefas do projeto, atualize o WMK "
+                "para usar validação JSON local."
+            ) from None
         if exc.code == 403 and "error code: 1010" in detail.lower():
             raise ValueError(f"{provider}: bloqueio Cloudflare 403/1010 (assinatura do cliente HTTP). Consulte o suporte do provedor se persistir.") from None
         raise ValueError(f"{provider}: HTTP {exc.code}: {detail}") from None
