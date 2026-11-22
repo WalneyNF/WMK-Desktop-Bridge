@@ -95,13 +95,11 @@ def save(name: str, value: str) -> dict:
 def get(name: str) -> str:
     name = _name(name)
     current = os.getenv(name, "").strip()
-    if current:
-        return current
     if os.name != "nt":
-        return ""
+        return current
     path = _path(name)
     if not path.is_file():
-        return ""
+        return current
     try:
         data = _crypt(path.read_bytes(), False).decode("utf-8")
         prefix = _PREFIX + "\n"
@@ -117,4 +115,4 @@ def status(name: str) -> dict:
     env = bool(os.getenv(name, "").strip())
     stored = os.name == "nt" and _path(name).is_file()
     return {"configurada": bool(env or stored),
-            "origem": "ambiente" if env else ("DPAPI Windows" if stored else "ausente")}
+            "origem": "DPAPI Windows" if stored else ("ambiente" if env else "ausente")}
