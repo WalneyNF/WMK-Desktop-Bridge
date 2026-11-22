@@ -100,7 +100,8 @@ def _request(provider: str, model: str, system: str, question: str) -> str:
     if env and not token:
         raise ValueError(f"Configure {env} antes de iniciar o servidor")
     messages = [{"role": "system", "content": system}, {"role": "user", "content": question}]
-    headers = {"Content-Type": "application/json"}
+    headers = {"Content-Type": "application/json", "Accept": "application/json",
+               "User-Agent": "WMK-Desktop-Bridge/0.7.7 (+https://github.com/WalneyNF/WMK-Desktop-Bridge)"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
     if provider == "ollama":
@@ -114,7 +115,10 @@ def _request(provider: str, model: str, system: str, question: str) -> str:
         with urllib.request.urlopen(req, timeout=85) as res:
             result = json.load(res)
     except urllib.error.HTTPError as exc:
-        raise ValueError(f"{provider}: HTTP {exc.code}: {exc.read(300).decode(errors='replace')}") from None
+        detail = exc.read(600).decode(errors="replace")
+        if exc.code == 403 and "error code: 1010" in detail.lower():
+            raise ValueError(f"{provider}: bloqueio Cloudflare 403/1010 (assinatura do cliente HTTP). Consulte o suporte do provedor se persistir.") from None
+        raise ValueError(f"{provider}: HTTP {exc.code}: {detail}") from None
     except (urllib.error.URLError, TimeoutError) as exc:
         raise ValueError(f"{provider}: falha de conexão/tempo: {exc}") from None
     if provider == "ollama":
