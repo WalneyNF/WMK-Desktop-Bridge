@@ -171,7 +171,7 @@ def test_provider(payload: dict) -> dict:
         raise PermissionError("Autorize a chamada de teste ao provedor")
     if provider not in ("groq", "ollama"):
         raise ValueError("Selecione Groq ou Ollama")
-    if not isinstance(model,str) or not re.fullmatch(r"[\\w./:-]{1,90}",model):
+    if not isinstance(model,str) or not re.fullmatch(r"[\w./:-]{1,90}",model):
         raise ValueError("Nome de modelo inválido")
     messages = [{"role":"user","content":"Responda apenas OK."}]
     if provider == "groq":
