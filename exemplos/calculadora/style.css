@@ -1,6 +1,101 @@
-:root{font-family:Segoe UI,system-ui,Arial,sans-serif;color-scheme:dark;background:#090e18;color:#ecf5ff}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:radial-gradient(circle at top,#1d3f54,#0a111e 65%)}
-.calculator{width:min(100%,350px);background:#142338;border:1px solid #31536b;padding:22px;border-radius:22px;box-shadow:0 24px 65px #0008}
-.heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px}.brand{font-size:22px;font-weight:800;letter-spacing:2px;color:#7df1ff}.brand span{font-size:11px;color:#9cb8ca}.heading small{font-size:10px;color:#99b6c9}
-.display{display:block;text-align:right;background:#0a1525;border:1px solid #284457;border-radius:12px;min-height:84px;padding:22px 12px;font-size:32px;overflow-x:auto;white-space:nowrap;font-variant-numeric:tabular-nums;margin-bottom:14px}
-.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.keys button{font:600 21px Segoe UI,Arial,sans-serif;border:1px solid #3b5870;border-radius:11px;min-height:58px;background:#1d354c;color:#eaf6fc;cursor:pointer;transition:background .12s,transform .12s}.keys button:hover{background:#2b526c}.keys button:active{transform:scale(.95)}.keys button:focus-visible{outline:2px solid #77e9f5;outline-offset:2px}.keys .operator{background:#1a5867;color:#86f3ff}.keys .utility{background:#31445b;color:#dceff4}.keys .equals{background:#1b9aab;color:#07151a}.hint{color:#9eb9c9;font-size:11px;text-align:center;margin:15px 0 0}footer{position:fixed;bottom:9px;font-size:11px;color:#89aab9;text-align:center;left:0;right:0}@media(max-height:670px){footer{position:static;margin-top:12px}body{display:flex;flex-direction:column;justify-content:center}}
+/* WMK Calc Studio — tema escuro tecnológico v1.1, sem dependências externas */
+:root {
+  font-family: "Segoe UI", Inter, system-ui, sans-serif;
+  color-scheme: dark;
+  color: #eaf8ff;
+  background: #070d17;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  padding: 35px 20px 65px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(ellipse at 18% 12%, rgba(25,146,177,.23), transparent 43%),
+    radial-gradient(ellipse at 80% 82%, rgba(20,68,125,.25), transparent 42%),
+    linear-gradient(135deg, #08101d, #10192b 54%, #070c16);
+}
+.calculator {
+  position: relative;
+  width: min(100%, 390px);
+  border: 1px solid #376178;
+  border-radius: 25px;
+  padding: 23px;
+  background: linear-gradient(160deg,#192b40 0%,#101b2a 65%,#0c1421 100%);
+  box-shadow: 0 30px 85px #02050bbc, inset 0 1px #ffffff17, 0 0 45px #00c6f014;
+}
+.calculator::before {
+  content:"";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  border: 1px solid #a4eeff0c;
+}
+.heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:19px; }
+.brand { color:#93efff; font-size:24px; font-weight:850; letter-spacing:1.8px; text-shadow:0 0 18px #18bfd452; }
+.brand span { font-size:12px; color:#76b5ca; letter-spacing:3px; }
+.heading small { padding:5px 8px; border-radius:6px; background:#153448; border:1px solid #285670; font-size:10px; color:#b3d5e4; white-space:nowrap; }
+.display {
+  display:flex; align-items:flex-end; justify-content:flex-end;
+  min-height:112px;
+  width:100%;
+  margin:0 0 18px;
+  padding:25px 17px;
+  background:linear-gradient(180deg,#07111e,#0d2130);
+  border:1px solid #2b6070;
+  border-radius:15px;
+  box-shadow: inset 0 4px 18px #0008, 0 0 25px #03d2e914;
+  color:#f1feff;
+  font-size:clamp(32px,8vw,42px);
+  font-weight:500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing:1px;
+  overflow-x:auto;
+  white-space:nowrap;
+  scrollbar-width:thin;
+}
+.keys { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:11px; }
+.keys button {
+  appearance:none;
+  min-height:65px;
+  border-radius:13px;
+  border:1px solid #35566c;
+  background:linear-gradient(165deg,#263e55,#1a2e43);
+  color:#ebf8ff;
+  font:650 23px "Segoe UI",system-ui,sans-serif;
+  cursor:pointer;
+  box-shadow:0 4px 0 #07111d, inset 0 1px #ffffff15;
+  transition:background .14s, transform .12s, box-shadow .12s;
+  user-select:none;
+  touch-action:manipulation;
+}
+.keys button:hover { background:linear-gradient(160deg,#345874,#24435c); }
+.keys button:active { transform:translateY(3px); box-shadow:0 1px 0 #07111d; }
+.keys button:focus-visible { outline:2px solid #6ff5ff; outline-offset:3px; }
+.keys .utility { background:linear-gradient(155deg,#364c62,#293a50); color:#cde7f2; font-size:20px; }
+.keys .utility:hover { background:#48617b; }
+.keys .operator { background:linear-gradient(160deg,#175e74,#104659); color:#9bf4ff; border-color:#247f96; }
+.keys .operator:hover { background:#20798f; }
+.keys .equals { background:linear-gradient(155deg,#37d4df,#19a6ba); color:#032531; border-color:#68eff3; font-weight:800; }
+.keys .equals:hover { background:#6ae9f2; }
+.hint { color:#91adbd; font-size:11px; line-height:1.6; text-align:center; margin:20px 4px 0; }
+footer { position:fixed; bottom:15px; left:0; right:0; text-align:center; font-size:11px; color:#7c9bad; }
+@media (max-width:420px) {
+  body { padding:15px 12px 45px; }
+  .calculator { padding:16px; border-radius:18px; }
+  .keys { gap:8px; }
+  .keys button { min-height:57px; font-size:21px; }
+  .display { min-height:90px; }
+}
+@media (max-height:690px) {
+  body { padding-top:12px; }
+  footer { position:static; margin-top:10px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .keys button { transition:none; }
+}
