@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WMK Central de Agentes e MCP — v0.7.1</title>
+<title>WMK Central de Agentes e MCP — v0.7.4</title>
 <style>
 :root{color-scheme:dark;font:14px Segoe UI,Arial,sans-serif;background:#0b1420;color:#dceef6}
 *{box-sizing:border-box}body{margin:0}header{padding:14px 20px;background:#182b40;border-bottom:1px solid #35546a;display:flex;align-items:center;gap:15px}h1{font-size:19px;margin:0;color:#65e2f1}
@@ -17,7 +17,7 @@ h2{font-size:15px;margin:0;color:#8be5f4}pre{white-space:pre-wrap;overflow-wrap:
 #approval button{background:#27685e}#approval pre{max-height:180px}footer{padding:8px 16px;color:#9cafbf}.chatlog{min-height:170px;max-height:340px;overflow:auto;background:#081725;border:1px solid #29475e;border-radius:7px;padding:10px;display:grid;align-content:start;gap:9px}.bubble{padding:9px 11px;border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}.bubble.user{background:#1e4c60;margin-left:14%}.bubble.assistant{background:#203448;margin-right:12%}.chat-controls{display:flex;gap:7px;flex-wrap:wrap}.chat-controls button{flex:1}
 @media(max-width:800px){main{grid-template-columns:1fr}} 
 </style></head><body>
-<header><h1>WMK Central de Agentes e MCP</h1><span class="small">v0.7.1 • ambiente local • aprovação humana</span><button style="margin-left:auto" onclick="location.href='/'">Voltar</button></header>
+<header><h1>WMK Central de Agentes e MCP</h1><span class="small">v0.7.4 • ambiente local • aprovação humana</span><button style="margin-left:auto" onclick="location.href='/'">Voltar</button></header>
 <main>
 <section><h2>🤖 Agentes cadastrados</h2><div id="agents-list">Carregando...</div>
 <h2>📚 WMK Skills Manager</h2>
@@ -45,6 +45,13 @@ h2{font-size:15px;margin:0;color:#8be5f4}pre{white-space:pre-wrap;overflow-wrap:
 <textarea id="chat-input" rows="3" maxlength="2500" placeholder="Pergunte sobre programação, Blender, jogos ou ferramentas..."></textarea>
 <div class="chat-controls"><button id="chat-send">Enviar ao agente</button><button id="chat-clear">Limpar conversa</button></div>
 <div class="small" id="chat-state">Histórico fica apenas na memória desta página. Mensagens são enviadas ao provedor selecionado.</div>
+<h2>🛠️ Agente programador de projetos</h2>
+<p class="small">A IA pode examinar pastas, ler vários arquivos e preparar até quatro alterações por tarefa. Os arquivos só mudam após aprovação no painel local.</p>
+<textarea id="coding-task" rows="4" maxlength="2000" placeholder="Ex.: analise os arquivos Python e proponha corrigir um bug com novos testes.">Analise a estrutura do projeto e sugira uma melhoria pequena, criando uma proposta de alteração para aprovação.</textarea>
+<label><input type="checkbox" id="coding-consent"> Autorizo o envio do conteúdo dos arquivos consultados ao provedor deste agente durante esta tarefa.</label>
+<button id="coding-run">Iniciar tarefa de programação</button>
+<pre id="coding-result">Nenhuma tarefa iniciada.</pre>
+<button id="coding-approvals" onclick="location.href='/approvals'">Abrir revisão das alterações</button>
 <h2>🧠 Testar agente com Blender</h2>
 <label>Agente ativo <select id="selected-agent"></select></label>
 <label>Pedido <textarea id="task" rows="4">Crie um cubo de tamanho 2 na posição [0,0,1]. Não apague nada.</textarea></label>
@@ -139,6 +146,15 @@ $('review-ask').onclick=async()=>{
  try{const result=await api('/api/agents/ask',{agent_id:active,relative:$('review-path').value,question:$('review-question').value,consent:$('review-consent').checked});text('review-result',result.resposta); }
  catch(e){text('review-result','Erro: '+e.message)}
  finally{button.disabled=false;$('review-consent').checked=false}
+};
+$('coding-run').onclick=async()=>{
+ const button=$('coding-run');button.disabled=true;
+ text('coding-result','Executando até 8 etapas de leitura/planejamento. Sem salvar arquivos...');
+ try{
+ const result=await api('/api/coding/task',{agent_id:active,task:$('coding-task').value,consent:$('coding-consent').checked});
+ text('coding-result',result);
+ }catch(e){text('coding-result','Erro: '+e.message)}
+ finally{button.disabled=false;$('coding-consent').checked=false}
 };
 refresh();
 </script></body></html>
