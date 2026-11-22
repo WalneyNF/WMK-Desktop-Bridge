@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from bridge import diagnostic, drives, folder_sizes, list_folder, ollama_models
+from hardware import hardware_info
 
 HOST, PORT = "127.0.0.1", 8767
 DASHBOARD = Path(__file__).parent / "web" / "index.html"
@@ -37,6 +38,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(drives())
             if route == "/api/ollama":
                 return self.reply(ollama_models())
+            if route == "/api/hardware":
+                return self.reply(hardware_info())
             if route == "/api/home":
                 return self.reply(list_folder(str(Path.home()), 80))
             if route == "/api/size-home":
