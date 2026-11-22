@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.7.3 (protótipo: MCP seguro de arquivos com revisão humana)** · Interface em português do Brasil.
+> Versão: **0.7.4 (protótipo: agente programador iterativo)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -24,6 +24,7 @@ Criar uma alternativa independente para diagnósticos locais de disco e arquivos
 | Servidor MCP local via stdio | ✅ |
 | Servidor MCP mínimo para acessar uma pasta e propor alterações | ✅ Protótipo |
 | Fila de alterações com diff, SHA e aprovação pelo painel | ✅ Protótipo, testes de campo pendentes |
+| Agente programador iterativo: ler projeto e propor várias edições | ✅ Protótipo (sem execução de testes) |
 | Plugin ChatGPT conectado ao Windows | ❌ Ainda exige conexão/túnel e permissão da conta |
 | Pasta única autorizada para agentes (somente leitura) | ✅ |
 | Monaco Code Studio, diff, hash e backup para edição manual | ✅ Protótipo |
@@ -46,6 +47,16 @@ O projeto possui `mcp_workspace_safe.py`, um MCP mínimo que expõe somente list
 **Guia completo de conexão, passos e limitações:** [manuais/CHATGPT_MCP_WINDOWS.md](manuais/CHATGPT_MCP_WINDOWS.md).
 
 Enquanto o ChatGPT não estiver ligado ao WMK via MCP, ainda podemos atualizar projetos via repositório GitHub conectado. Não afirme que os arquivos locais foram modificados antes de uma chamada MCP bem-sucedida.
+
+## Agente programador de projetos — v0.7.4
+
+No painel `http://127.0.0.1:8767/agents` foi incluída a seção **Agente programador de projetos**, inspirada no fluxo de ferramentas de agentes como Codex e Claude Code. Selecione um agente com capacidade `workspace_read` e indique uma tarefa. O agente pode listar diretórios, ler arquivos de texto e gerar até quatro propostas de criação/edição em no máximo oito passos, **sem executar scripts ou salvar arquivos diretamente**.
+
+O resultado aparece em `/approvals`, onde o usuário lê o diff, aprova ou rejeita. Os arquivos são gravados apenas com aprovação humana e backup. É obrigatório configurar `WMK_WORKSPACE` para uma única pasta.
+
+**Não é ainda um substituto funcional completo para Codex/Claude Code**: não inclui shell, execução de testes/build, busca semântica, Git ou sandbox forte do Windows. Tarefas longas e projetos extensos exigem versões posteriores. O uso de APIs externas pode transmitir conteúdo dos arquivos para o provedor após consentimento.
+
+**Manual:** [manuais/AGENTE_PROGRAMADOR.md](manuais/AGENTE_PROGRAMADOR.md).
 
 ## Instalação no Windows 10/11
 
