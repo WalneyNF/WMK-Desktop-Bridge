@@ -15,6 +15,7 @@ from code_ai import ai_status, suggest_code
 HOST, PORT = "127.0.0.1", 8767
 DASHBOARD = Path(__file__).parent / "web" / "index.html"
 EDITOR = Path(__file__).parent / "web" / "editor.html"
+EDITOR_AI = Path(__file__).parent / "web" / "editor_ai.js"
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -27,6 +28,16 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply({"erro": "Origem não autorizada"}, 403)
         route = urlparse(self.path).path
         try:
+            if route == "/editor_ai.js":
+                data = EDITOR_AI.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/javascript; charset=utf-8")
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
             if route in ("/", "/editor"):
                 is_editor = route == "/editor"
                 data = (EDITOR if is_editor else DASHBOARD).read_bytes()
