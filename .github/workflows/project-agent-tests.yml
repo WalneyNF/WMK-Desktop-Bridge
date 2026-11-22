@@ -1,0 +1,30 @@
+name: WMK Project Agent - testes de integracao
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'project_agent.py'
+      - 'mcp_approvals.py'
+      - 'editor_backend.py'
+      - 'workspace.py'
+      - 'agent_hub.py'
+      - 'code_ai.py'
+      - 'tests/test_project_agent.py'
+      - '.github/workflows/project-agent-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  project-agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Testar agente lendo arquivos, staging e aprovacao
+        run: python -m unittest discover -s tests -p 'test_project_agent.py' -v
