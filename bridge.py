@@ -11,7 +11,7 @@ import urllib.request
 from pathlib import Path
 from security_policy import require_diagnostic_mode, policy_status
 
-VERSION = "0.7.4"
+VERSION = "0.7.5"
 GIB = 1024 ** 3
 
 
@@ -163,9 +163,34 @@ def ollama_models() -> dict:
 
 
 def diagnostic() -> dict:
-    return {"aplicativo": "WMK Desktop Bridge", "versao": VERSION,
-            "politica": policy_status(), "sistema": sys.platform,
-            "raizes_autorizadas": [str(p) for p in allowed_roots()], "unidades": [] if policy_status()["modo"] == "projeto_restrito" else drives()}
+    """Status sempre consultável, mesmo se WMK_WORKSPACE estiver inválido.
+
+    Não altera a política de acesso: as ferramentas de projeto continuam
+    rejeitando pastas inexistentes, links ou diretórios não autorizados.
+    """
+    from workspace import workspace_status
+    politica = policy_status()
+    result = {
+        "aplicativo": "WMK Desktop Bridge",
+        "versao": VERSION,
+        "politica": politica,
+        "sistema": sys.platform,
+        "raizes_autorizadas": [],
+        "unidades": [],
+        "workspace": workspace_status(),
+    }
+    if politica["modo"] == "projeto_restrito":
+        if result["workspace"]["configurado"]:
+            result["raizes_autorizadas"] = [result["workspace"]["pasta"]]
+        else:
+            result["aviso"] = "Pasta autorizada inválida: " + result["workspace"]["erro"]
+        return result
+    try:
+        result["raizes_autorizadas"] = [str(p) for p in allowed_roots()]
+        result["unidades"] = drives()
+    except (OSError, ValueError, PermissionError, RuntimeError) as exc:
+        result["aviso"] = "Diagnóstico parcialmente indisponível: " + str(exc)
+    return result
 
 
 if __name__ == "__main__":
