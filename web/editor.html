@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WMK Code Studio v0.7.9</title>
+<title>WMK Code Studio v0.8.0</title>
 <style>
 :root{color-scheme:dark;font:14px Segoe UI,Arial;background:#0b121c;color:#e1eff7}*{box-sizing:border-box}
 body{margin:0}header{height:58px;display:flex;align-items:center;gap:12px;background:#152537;border-bottom:1px solid #33516b;padding:8px 14px}
@@ -12,7 +12,7 @@ aside,.editor-pane{background:#101f2f;border:1px solid #2b465a;border-radius:7px
 #ai-resize-handle:hover,#ai-resize-handle:focus-visible{background:#16a7bd}
 #ai-pane{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden}
 #ai-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 10px;background:#172c40;border-bottom:1px solid #38546a}
-#ai-output{flex:1;min-height:140px;overflow-y:auto;padding:18px;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;font:14px/1.7 "Segoe UI",sans-serif;color:#e4f1fa;background:#0b1928}
+#ai-output{flex:1;min-height:140px;overflow-y:auto;padding:18px;white-space:normal;overflow-wrap:anywhere;user-select:text;font:14px/1.7 "Segoe UI",sans-serif;color:#e4f1fa;background:#0b1928}
 #ai-output[data-state="empty"]{color:#9cb9c9}
 #ai-output[data-state="error"]{color:#ffb7ad}
 #ai-output[data-state="loading"]{color:#b1e9fa}
@@ -30,6 +30,41 @@ aside,.editor-pane{background:#101f2f;border:1px solid #2b465a;border-radius:7px
 #ai-copy-output{margin-left:auto}
 #ai-pane button{font-size:12px}
 
+
+/* Markdown da resposta Groq/Ollama: separado da área de código Monaco */
+#ai-output .wmk-md-content{max-width:100%;line-height:1.7;font-size:14px;color:#e3eff8}
+#ai-output .wmk-md-content h1,#ai-output .wmk-md-content h2,#ai-output .wmk-md-content h3,
+#ai-output .wmk-md-content h4{color:#8de8f6;line-height:1.32;margin:1.15em 0 .55em;font-weight:700}
+#ai-output .wmk-md-content h1{font-size:21px;border-bottom:1px solid #32637a;padding-bottom:8px}
+#ai-output .wmk-md-content h2{font-size:18px;border-bottom:1px solid #254a60;padding-bottom:7px}
+#ai-output .wmk-md-content h3{font-size:16px}
+#ai-output .wmk-md-content h4{font-size:14px}
+#ai-output .wmk-md-content h1:first-child,#ai-output .wmk-md-content h2:first-child,
+#ai-output .wmk-md-content h3:first-child,#ai-output .wmk-md-content p:first-child{margin-top:0}
+#ai-output .wmk-md-content p{margin:0 0 13px}
+#ai-output .wmk-md-content strong{color:#e9faff;font-weight:750}
+#ai-output .wmk-md-content em{color:#bedee9}
+#ai-output .wmk-md-content ul,#ai-output .wmk-md-content ol{padding-left:24px;margin:8px 0 16px}
+#ai-output .wmk-md-content li{margin:6px 0;padding-left:3px}
+#ai-output .wmk-md-content li::marker{color:#42cfe6}
+#ai-output .wmk-md-content blockquote{border-left:3px solid #33aabe;background:#143449;padding:12px 15px;margin:12px 0;border-radius:0 7px 7px 0}
+#ai-output .wmk-md-content blockquote p:last-child{margin-bottom:0}
+#ai-output .wmk-md-content hr{border:0;border-top:1px solid #315268;margin:22px 0}
+#ai-output .wmk-md-content a{color:#75dcea;text-decoration:underline;text-underline-offset:3px}
+#ai-output .wmk-md-content code{background:#162b41;color:#97f1fa;border:1px solid #33516b;border-radius:4px;padding:1px 5px;font-family:Consolas,monospace;font-size:12px}
+#ai-output .wmk-md-table-scroll{max-width:100%;overflow-x:auto;border:1px solid #33556b;border-radius:8px;margin:12px 0 17px}
+#ai-output .wmk-md-content table{width:100%;border-collapse:collapse;min-width:330px;font-size:12px;line-height:1.5}
+#ai-output .wmk-md-content th{background:#1a465b;color:#d2faff;text-align:left;font-weight:750}
+#ai-output .wmk-md-content td{background:#10283a}
+#ai-output .wmk-md-content th,#ai-output .wmk-md-content td{padding:10px 12px;border-bottom:1px solid #29465a;vertical-align:top;overflow-wrap:anywhere}
+#ai-output .wmk-md-content tr:last-child td{border-bottom:0}
+#ai-output .wmk-md-content tbody tr:nth-child(even) td{background:#142e40}
+#ai-output .wmk-md-code{border:1px solid #30536a;border-radius:9px;overflow:hidden;margin:12px 0 18px;background:#081522}
+#ai-output .wmk-md-codebar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#1b3348;padding:6px 10px;font-size:11px;color:#93cada}
+#ai-output .wmk-md-code pre{white-space:pre;overflow-x:auto;margin:0;padding:15px 12px;color:#d4edff;font:12px/1.6 Consolas,monospace}
+#ai-output .wmk-md-code pre code{border:0;background:none;padding:0;color:inherit}
+#ai-output[data-state="empty"],#ai-output[data-state="loading"],#ai-output[data-state="error"]{white-space:pre-wrap}
+
 .panel-title{background:#1d3448;padding:9px 10px;font-weight:600;display:flex;gap:6px;align-items:center;justify-content:space-between}
 #tree{flex:1;overflow:auto;padding:10px}#tree button{display:block;text-align:left;width:100%;background:transparent;border:0;padding:5px;color:#d7e8f1;overflow-wrap:anywhere}#tree button:hover{background:#22465a}
 .toolbar{display:flex;gap:5px;padding:7px;flex-wrap:wrap;align-items:center}.toolbar input{flex:1;min-width:125px}
@@ -42,7 +77,7 @@ aside,.editor-pane{background:#101f2f;border:1px solid #2b465a;border-radius:7px
 @media(max-width:1050px){main{grid-template-columns:200px minmax(280px,1fr) minmax(320px,.85fr)}#ai-resize-handle{display:none}}
 @media(max-width:800px){header{height:auto;flex-wrap:wrap}main{grid-template-columns:minmax(0,1fr);height:auto}aside,.editor-pane{min-height:260px}#editor,#fallback{height:420px;min-height:420px}#ai-pane{height:620px}#close{margin-left:0}}
 </style></head><body>
-<header><strong>WMK Code Studio</strong> <small>v0.7.9 · Monaco</small><span id="project" class="muted">Carregando pasta...</span>
+<header><strong>WMK Code Studio</strong> <small>v0.8.0 · Monaco</small><span id="project" class="muted">Carregando pasta...</span>
 <button id="calc-demo" type="button" onclick="window.open('/exemplo/calculadora','_blank')">🧮 Testar calculadora</button><button id="close" type="button">Voltar ao painel</button></header>
 <main>
 <aside><div class="panel-title">📁 Explorador <button id="refresh" type="button">Atualizar</button></div>
@@ -131,4 +166,4 @@ if(typeof require==='function'&&typeof require.config==='function'){
  },()=>{$('editor').style.display='none';$('fallback').style.display='block';feedback('Monaco não carregou; editor de texto alternativo disponível.')});
 }else{$('editor').style.display='none';$('fallback').style.display='block';feedback('Monaco indisponível; editor alternativo disponível.')}
 status();
-</script><script src="/editor_ai.js"></script></body></html>
+</script><script src="/markdown_renderer.js"></script><script src="/editor_ai.js"></script></body></html>
