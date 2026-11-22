@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.3.1 (protótipo local, somente leitura)** · Interface em português do Brasil.
+> Versão: **0.4.0 (protótipo local, somente leitura)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -23,7 +23,8 @@ Criar uma alternativa independente para diagnósticos locais de disco e arquivos
 | Agente experimental Groq com ferramentas de leitura permitidas | ✅ |
 | Servidor MCP local via stdio | ✅ |
 | Painel HTML local com painéis móveis, redimensionáveis e layout persistente | ✅ |
-| Executar PowerShell pela IA | ❌ Não implementado |
+| Executar diagnósticos PowerShell fixos por IA (Groq/MCP) | ✅ Com restrições |
+| Executar PowerShell arbitrário pela IA | ❌ Não permitido |
 | Excluir arquivos pela IA | ❌ Não implementado |
 | Controle remoto pelo ChatGPT web | ❌ Não implementado |
 
@@ -143,6 +144,25 @@ O modelo precisa estar disponível na sua conta e suportar tool calling. Evite i
 
 **Manual completo:** [manuais/PRIMEIROS_PASSOS.md](manuais/PRIMEIROS_PASSOS.md).
 
+## PowerShell controlado por IA — v0.4.0
+
+O módulo [powershell_tools.py](powershell_tools.py) implementa **ações de diagnóstico fixas**. Uma IA pode selecionar um identificador de ação, mas **não pode enviar comandos PowerShell próprios** ao executor.
+
+| ID | O que consulta |
+|---|---|
+| `versao_powershell` | Versão do PowerShell |
+| `processos` | 15 processos com maior consumo de RAM |
+| `servicos_parados` | Lista resumida de serviços parados |
+| `unidades` | Espaço dos discos |
+| `rede` | Interfaces de rede ativas (sem IP/MAC) |
+| `tempo_atividade` | Última inicialização do Windows |
+
+A interface possui painel **PowerShell (diagnóstico)** com seleção e confirmação para cada execução; o agente Groq também exige confirmação individual no terminal. O servidor MCP local expõe `wmk_powershell_catalog` e `wmk_powershell_diagnose`; **clientes MCP externos podem invocar esses diagnósticos diretamente, sem passar pela confirmação do navegador ou Groq**. Por isso, configure somente clientes de confiança.
+
+Os scripts são constantes versionadas no código, usam PowerShell sem perfil, timeout de 20 segundos, saída limitada e logs locais `logs/powershell-audit.jsonl` (sem armazenar a saída). A proteção é uma lista fechada de scripts, não um analisador genérico de comandos. O projeto não deve ser executado como administrador sem necessidade.
+
+Rotas locais: `GET /api/powershell/catalog` e `POST /api/powershell/diagnose` com corpo JSON `{"action":"processos"}`. A rota POST exige Origin local e ação previamente cadastrada. Não expose a porta 8767 na internet.
+
 ## Segurança
 
 - Todas as ferramentas são **somente leitura**.
@@ -159,8 +179,9 @@ O modelo precisa estar disponível na sua conta e suportar tool calling. Evite i
 WMK-Desktop-Bridge/
 ├── bridge.py                # núcleo de leitura e diagnóstico
 ├── agente_groq.py            # agente experimental Groq com tool calling
+├── powershell_tools.py       # executor de diagnósticos PowerShell permitidos
 ├── hardware.py              # inventário de hardware via CIM
-├── mcp_server.py            # seis ferramentas MCP via stdio
+├── mcp_server.py            # oito ferramentas MCP via stdio
 ├── web_server.py            # API/painel local HTTP
 ├── web/index.html           # painel com janelas móveis
 ├── iniciar-painel.bat
@@ -175,8 +196,8 @@ WMK-Desktop-Bridge/
 ## Roadmap
 
 - **v0.3.1:** inventário e exportação TXT/JSON implementados, exemplo de agente Groq incluído; análise de caches e testes automatizados ainda pendentes.
-- **v0.4:** fila de operações de escrita com revisão humana, cópia de segurança e permissões por ferramenta.
-- **v0.5:** executor PowerShell com política restritiva, tempo limite e logs; nunca acesso irrestrito por padrão.
+- **v0.4.0:** diagnósticos PowerShell com lista fechada, confirmações no painel e Groq, logs e timeout; operações de escrita continuam pendentes.
+- **v0.5:** catálogo ampliado, aprovações de operações de escrita, restauração e permissões específicas por agente.
 - **v0.6:** agente remoto autenticado, transporte seguro e integração documentada com clientes compatíveis.
 
 ## Contribuições
