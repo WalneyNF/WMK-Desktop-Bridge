@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.5.2 (protótipo local, com editor manual protegido)** · Interface em português do Brasil.
+> Versão: **0.6.0 (protótipo local: Central de Agentes e Blender)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -25,6 +25,9 @@ Criar uma alternativa independente para diagnósticos locais de disco e arquivos
 | Pasta única autorizada para agentes (somente leitura) | ✅ |
 | Monaco Code Studio, diff, hash e backup para edição manual | ✅ Protótipo |
 | IA integrada ao Monaco com Groq/Ollama e propostas lado a lado | ✅ Protótipo, sujeito a testes Windows |
+| Central de Agentes: cadastro de agentes/provedores/permissões | ✅ Protótipo |
+| Blender Safe Bridge: consulta/criação de primitivas com aprovação | ✅ Protótipo |
+| Cliente MCP genérico para servidores externos | ❌ Ainda não implementado |
 | Painel HTML local com painéis móveis, redimensionáveis e layout persistente | ✅ |
 | Executar diagnósticos PowerShell fixos por IA (Groq/MCP) | ✅ Com restrições |
 | Executar PowerShell arbitrário pela IA | ❌ Não permitido |
@@ -213,6 +216,18 @@ Nas ações com código proposto, o usuário pode **comparar original e sugestã
 
 Para os passos completos e problemas conhecidos: **[Manual do Assistente de Código](manuais/ASSISTENTE_CODIGO_IA.md)**.
 
+## Central de Agentes e Blender — v0.6.0
+
+Acesse **http://127.0.0.1:8767/agents** para cadastrar agentes com nome, provedor, modelo, instruções e capacidades. Os provedores disponíveis no cadastro são **Ollama**, **Groq**, **OpenAI API** e **Gemini API**; disponibilidade prática depende das chaves, modelos e suporte a respostas JSON dos provedores.
+
+A integração Blender desta versão utiliza **um add-on HTTP local próprio com token**, incluindo consulta de objetos, criação de cubos/esferas/cilindros e alteração de cores. **Não é um cliente MCP genérico**: o Bridge expõe ferramentas Blender de leitura ao MCP local, mas não conecta automaticamente qualquer MCP externo. A IA deve gerar uma proposta que o usuário aprova individualmente no painel antes de qualquer modificação da cena.
+
+**Configurar chaves no Windows:** `configurar-chaves.ps1` utiliza DPAPI; `iniciar-com-chaves.ps1` carrega os segredos protegidos do usuário e inicia o servidor. Para OpenAI, Groq e Gemini também podem ser usadas variáveis de ambiente temporárias, sem armazená-las no código.
+
+**Manual completo em português:** [Central de Agentes, MCP e Blender](manuais/AGENTES_MCP_BLENDER.md).
+
+**Segurança:** o painel web ainda não possui autenticação forte por sessão. A aprovação pelo navegador protege contra ações acidentais da IA, mas **não oferece isolamento robusto contra outros processos locais**. Não exponha portas do WMK/Blender à internet. A integração do Blender não inclui Python arbitrário nem exclusão. Os testes Windows/Blender permanecem pendentes.
+
 ## Segurança
 
 - Todas as ferramentas são **somente leitura**.
@@ -232,6 +247,9 @@ WMK-Desktop-Bridge/
 ├── workspace.py             # isolamento lógico de arquivos de projetos
 ├── editor_backend.py        # leitura, diff, hash e gravação humana
 ├── code_ai.py               # adaptadores Groq/Ollama sem escrita
+├── agent_hub.py             # cadastro de agentes e propostas
+├── blender_client.py        # cliente HTTP seguro do Blender
+├── blender_addon/           # add-on Blender sem Python remoto
 ├── agente_groq.py            # agente experimental Groq com tool calling
 ├── powershell_tools.py       # executor de diagnósticos PowerShell permitidos
 ├── hardware.py              # inventário de hardware via CIM
@@ -240,6 +258,9 @@ WMK-Desktop-Bridge/
 ├── web/index.html           # painel com janelas móveis
 ├── web/editor.html          # Monaco Code Studio
 ├── web/editor_ai.js         # interface das sugestões e comparação
+├── web/agents.html          # central de agentes e Blender
+├── configurar-chaves.ps1    # salva credenciais cifradas por DPAPI
+├── iniciar-com-chaves.ps1   # inicia servidor usando DPAPI
 ├── iniciar-painel.bat
 ├── iniciar-mcp.bat
 ├── requirements.txt
@@ -255,7 +276,9 @@ WMK-Desktop-Bridge/
 - **v0.4.0:** diagnósticos PowerShell com lista fechada, confirmações no painel e Groq, logs e timeout; operações de escrita continuam pendentes.
 - **v0.5.0:** Monaco Code Studio e pasta única implementados como protótipo; aprovação centralizada segura para agentes e testes em Windows ainda pendentes.
 - **v0.5.2:** assistente Groq/Ollama no Monaco, propostas e comparação lado a lado (testes de campo ainda necessários).
-- **v0.6:** agente remoto autenticado, transporte seguro e integração documentada com clientes compatíveis.
+- **v0.6.0:** cadastro de agentes, provedores, Blender Safe Bridge e manuais. Necessita testes Windows/Blender.
+- **v0.7:** cliente MCP genérico com catálogo de ferramentas, permissões por agente, testes e autenticação de sessão.
+- **futuro:** agente remoto autenticado com TLS, transporte seguro e integração ao ChatGPT web.
 
 ## Contribuições
 
