@@ -13,6 +13,7 @@ from pathlib import Path
 import subprocess
 import threading
 import time
+from security_policy import require_diagnostic_mode
 
 ACTIONS = {
     "versao_powershell": ("Versão do PowerShell", "$PSVersionTable.PSVersion.ToString()"),
@@ -32,6 +33,7 @@ _LOG_LOCK = threading.Lock()
 
 
 def catalog() -> list[dict]:
+    require_diagnostic_mode()
     return [{"id": key, "descricao": item[0], "leitura": True} for key, item in ACTIONS.items()]
 
 
@@ -50,6 +52,7 @@ def _audit(action: str, outcome: str, duration: float) -> None:
 
 
 def run_action(action: str) -> dict:
+    require_diagnostic_mode()
     if action not in ACTIONS:
         return {"status": "negado", "erro": "Ação não permitida; consulte wmk_powershell_catalog."}
     if os.name != "nt":
