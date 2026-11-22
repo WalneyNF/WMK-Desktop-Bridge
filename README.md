@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.7.9 (painel de resposta Groq/Ollama ampliado ao lado do Monaco)** · Interface em português do Brasil.
+> Versão: **0.8.0 (respostas IA renderizadas em Markdown seguro)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -135,6 +135,23 @@ O painel direito do Code Studio agora é dedicado à **resposta da IA**, com ár
 Em telas maiores que 1050px, arraste a divisória à esquerda da resposta para ajustar a largura do painel; o valor fica salvo no navegador. Em telas menores, o editor passa a ter organização adaptativa. A revisão e a comparação de códigos permanecem disponíveis, e nenhuma resposta salva o arquivo sem confirmação.
 
 **Teste:** atualize com `git pull`, reinicie o Python, entre em `http://127.0.0.1:8767/editor`, faça `Ctrl+F5`, abra `exemplos/calculadora/app.js`, clique em **Configurar IA** e escolha **Revisar**. Após receber a resposta, a área à direita exibirá a análise completa, sem misturar o texto com mensagens de status.
+
+## Code Studio v0.8.0 — resposta Markdown formatada
+
+A análise Groq/Ollama não é mais mostrada com asteriscos, tabelas e marcações Markdown literais. No painel ao lado do Monaco, o visualizador local `web/markdown_renderer.js` reconhece:
+
+- Títulos `#`, `##`, `###` e níveis seguintes.
+- **Negrito**, *itálico*, links `https://`, código em linha.
+- Listas numeradas ou com marcadores; citações; separadores.
+- Tabelas Markdown com cabeçalhos e rolagem horizontal.
+- Blocos de código cercados por três crases, com botão **Copiar código**.
+- Botões **Copiar Markdown** e **Salvar .md** para preservar a resposta original do modelo.
+
+**Segurança:** o renderizador constrói os elementos com APIs DOM e `textContent`. Não interpreta nem executa HTML recebido da IA; URLs só são abertas como links para endereços HTTP(S), em nova aba com `noopener noreferrer`. Não depende de biblioteca de Markdown externa.
+
+Para testar no Windows, atualize via `git pull`, **pare e reinicie** `web_server.py`, abra `http://127.0.0.1:8767/editor`, pressione `Ctrl+F5` e faça a revisão de `exemplos/calculadora/index.html` ou `app.js`. A resposta anterior não é restaurada após atualizar; solicite uma análise nova.
+
+O parser é intencionalmente limitado ao Markdown mais comum. HTML embutido, extensões específicas como Mermaid, matemática LaTeX e tabelas malformadas continuam como texto normal. As formatações só funcionam se o modelo retornar Markdown minimamente válido.
 
 ## Instalação no Windows 10/11
 
