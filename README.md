@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.7.7 (cliente HTTP Groq identificado e calculadora com CSS corrigido)** · Interface em português do Brasil.
+> Versão: **0.7.8 (Groq configurável pelo Code Studio, com DPAPI Windows)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -110,6 +110,23 @@ git pull
 Abra `http://127.0.0.1:8767/exemplo/calculadora/` e no Code Studio clique em **Testar resposta do provedor (sem arquivo)**. Confirme a versão `0.7.7` em `/api/status`.
 
 Documentação Cloudflare: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-1xxx-errors/error-1010/
+
+## Groq não encontra a chave? Correção v0.7.8
+
+O Code Studio antes consultava apenas `GROQ_API_KEY` no ambiente do processo Python, mesmo quando a chave tinha sido cadastrada em outra sessão/PowerShell. Agora existe um **cofre de credenciais local no Windows**, com criptografia DPAPI vinculada ao usuário atual e um botão na própria interface.
+
+1. Interrompa o servidor antigo com Ctrl+C e execute `git pull`.
+2. Inicie o WMK com `$env:WMK_WORKSPACE='D:\\Ferramentas\\WMK-Desktop-Bridge'; py web_server.py`.
+3. Abra `http://127.0.0.1:8767/editor`.
+4. Selecione Groq → clique **Configurar chave Groq no Windows** → cole a sua chave no campo protegido → clique **Salvar chave protegida**.
+5. Clique **Verificar configuração** e depois **Testar resposta do provedor (sem arquivo)**.
+6. Se a resposta for OK, abra a calculadora e peça para o Groq revisar `exemplos/calculadora/app.js`.
+
+**Não é necessário reiniciar após salvar uma chave pelo painel.** O Code Studio, o teste de conexão e os agentes consultam o mesmo cofre. A chave não é gravada no repositório nem exibida nas respostas da API. Arquivos protegidos ficam em `%LOCALAPPDATA%\\WMKDesktopBridge\\secrets` com sufixo `.wmk`. O antigo script PowerShell gravava segredos em um formato `.dpapi` diferente: quem utilizou esse script deverá cadastrar novamente **uma única vez** no painel. Não coloque credenciais em chats, issues ou arquivos do projeto.
+
+**Segurança:** DPAPI protege a chave em repouso para o usuário Windows, mas não impede outro programa malicioso executado com essa mesma conta de recuperar credenciais. A interface HTTP local ainda não possui autenticação forte por sessão; não exponha a porta 8767 à rede. O código precisa de validação prática em Windows.
+
+Se o teste retornar **HTTP 403/1010** depois de cadastrar a chave, é um problema distinto: o provedor/Cloudflare está recusando a conexão. Não significa que a chave está ausente, e não há garantia de que o WMK possa contornar o bloqueio.
 
 ## Instalação no Windows 10/11
 
