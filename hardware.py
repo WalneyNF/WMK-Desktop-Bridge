@@ -14,6 +14,7 @@ _CACHE_AT = 0.0
 # Script estático: não recebe trechos de código, caminhos ou parâmetros do usuário.
 _PS = r"""
 $ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 function Consultar([string]$classe, [string[]]$campos) {
     try {
         $result = @(Get-CimInstance -ClassName $classe -ErrorAction Stop |
