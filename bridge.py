@@ -6,9 +6,11 @@ import os
 import shutil
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 GIB = 1024 ** 3
 
 
@@ -96,13 +98,53 @@ def folder_sizes(path: str, limit: int = 20, max_files: int = 200000) -> dict:
 
 
 def ollama_models() -> dict:
+    """Preferir API HTTP local do Ollama; CLI apenas como alternativa.
+
+    A API normalmente responde sem precisar aguardar o executável 'ollama list'.
+    Se o Ollama estiver offline, informar a causa em vez de aguardar indefinidamente.
+    """
+    url = os.getenv("WMK_OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
+    # Não permitir URLs externas: este diagnóstico é exclusivamente local.
+    if not (url.startswith("http://127.0.0.1:") or url.startswith("http://localhost:")):
+        return {"status": "configuracao_invalida", "erro": "WMK_OLLAMA_URL deve apontar para localhost"}
     try:
-        process = subprocess.run(["ollama", "list"], capture_output=True, text=True,
-                                 timeout=15, shell=False, stdin=subprocess.DEVNULL)
-        return {"codigo": process.returncode, "saida": process.stdout[:12000],
-                "erro": process.stderr[:2000]}
-    except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
-        return {"erro": str(exc)}
+        request = urllib.request.Request(url + "/api/tags", headers={"Accept": "application/json"})
+        with urllib.request.urlopen(request, timeout=5) as response:
+            data = json.load(response)
+        models = data.get("models", [])
+        if not isinstance(models, list):
+            raise ValueError("Resposta inválida da API: models não é uma lista")
+        return {
+            "status": "online", "origem": "api", "url": url,
+            "modelos": [{"nome": m.get("name", ""), "tamanho_gb": round(m.get("size", 0)/GIB, 2),
+                         "modificado": m.get("modified_at", "")} for m in models if isinstance(m, dict)],
+            "quantidade": len(models)
+        }
+    except (urllib.error.URLError, TimeoutError, ValueError, OSError, json.JSONDecodeError) as api_error:
+        api_message = str(api_error)
+    timeout = max(5, min(int(os.getenv("WMK_OLLAMA_TIMEOUT", "60")), 180))
+    try:
+        flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+        process = subprocess.run(
+            ["ollama", "list"], capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=timeout, shell=False, stdin=subprocess.DEVNULL, creationflags=flags)
+        return {
+            "status": "online" if process.returncode == 0 else "erro_cli",
+            "origem": "cli", "codigo": process.returncode,
+            "saida": process.stdout[:12000], "erro": process.stderr[:2000],
+            "aviso_api": api_message
+        }
+    except FileNotFoundError:
+        return {"status": "indisponivel",
+                "erro": "API local indisponível e executável ollama não encontrado no PATH.",
+                "detalhe_api": api_message}
+    except subprocess.TimeoutExpired:
+        return {"status": "timeout",
+                "erro": f"Comando ollama list não respondeu em {timeout} segundos.",
+                "detalhe_api": api_message,
+                "sugestao": "Verifique se o Ollama está iniciado e teste http://127.0.0.1:11434/api/tags"}
+    except OSError as exc:
+        return {"status": "erro", "erro": str(exc), "detalhe_api": api_message}
 
 
 def diagnostic() -> dict:
