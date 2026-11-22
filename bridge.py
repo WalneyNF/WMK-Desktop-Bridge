@@ -10,7 +10,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-VERSION = "0.2.1"
+VERSION = "0.3.0"
 GIB = 1024 ** 3
 
 
