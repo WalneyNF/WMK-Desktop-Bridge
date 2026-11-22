@@ -14,6 +14,7 @@ import time
 import urllib.error
 import urllib.request
 from skills_manager import list_skills, skill_context
+from credential_store import get as get_credential, status as credential_status
 
 AGENTS_FILE = Path(__file__).resolve().parent / "config" / "agents.json"
 AGENTS_LOCK = threading.RLock()
@@ -30,7 +31,7 @@ ACTION_NAMES = {"list_objects", "create_cube", "create_uv_sphere", "create_cylin
 
 
 def providers_status() -> list[dict]:
-    return [{"id": name, "configurado": (not env or bool(os.getenv(env))),
+    return [{"id": name, "configurado": (not env or credential_status(env)["configurada"]),
              "variavel": env or "Nenhuma (Ollama local)", "modelo_exemplo": model}
             for name, (env, _, model) in PROVIDERS.items()]
 
@@ -96,7 +97,7 @@ def register_agent(data: dict) -> dict:
 
 def _request(provider: str, model: str, system: str, question: str) -> str:
     env, url, _ = PROVIDERS[provider]
-    token = os.getenv(env, "") if env else ""
+    token = get_credential(env) if env else ""
     if env and not token:
         raise ValueError(f"Configure {env} antes de iniciar o servidor")
     messages = [{"role": "system", "content": system}, {"role": "user", "content": question}]
