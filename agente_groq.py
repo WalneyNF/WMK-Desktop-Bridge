@@ -92,10 +92,10 @@ def run_question(question: str) -> str:
                 if name == "wmk_powershell_diagnose":
                     args = {"action": str(args.get("action", ""))}
                     requested = args["action"]
-                    print("\\n[AGENTE] Solicitação PowerShell: " + requested)
+                    print("\n[AGENTE] Solicitação PowerShell: " + requested)
                     if input("Autorizar esta consulta local? [s/N] ").strip().lower() not in ("s", "sim"):
                         raise PermissionError("Usuário negou a consulta PowerShell")
-                if name == "wmk_folder_sizes":
+                elif name == "wmk_folder_sizes":
                     args = {"path": str(args.get("path", "")),
                             "limit": max(1, min(int(args.get("limit", 10)), 20))}
                 else:
