@@ -70,8 +70,11 @@ def project_task(payload: dict) -> dict:
         "Você recebe conteúdo REAL de vários arquivos e precisa produzir alterações REAIS, "
         "não apenas afirmar que corrigiu. Responda SOMENTE um objeto JSON válido com "
         "as propriedades resumo (string), alteracoes (array). Cada item contém "
-        "arquivo (um dos caminhos fornecidos), codigo (conteúdo INTEIRO e atualizado do arquivo), "
-        "motivo (descrição curta). Faça até 4 alterações. Preserve funcionalidades e caminhos "
+        "arquivo (um dos caminhos fornecidos), motivo (descrição curta) e prefira "
+        "substituicoes: lista de objetos {antes: trecho EXATO do arquivo, depois: novo trecho}. "
+        "O trecho 'antes' deve ocorrer exatamente uma vez no arquivo. Se for necessário "
+        "reescrever o arquivo inteiro, use codigo (conteúdo integral atualizado) em vez "
+        "de substituicoes. Faça até 4 arquivos por tarefa. Preserve funcionalidades e caminhos "
         "já funcionais. Leia os relacionamentos HTML CSS JS. Nunca inclua arquivos "
         "que não foram fornecidos, comandos de shell, segredos ou instruções de executar scripts. "
         "Se não tiver alterações concretas, retorne alteracoes vazias e justifique em resumo. "
@@ -92,17 +95,40 @@ def project_task(payload: dict) -> dict:
         raise ValueError("A IA deve propor no máximo quatro alterações por tarefa")
     staged = []
     seen = set()
+    source_by_name = {item["arquivo"]: item["conteudo"] for item in related}
+    prepared = []
+    # Primeiro valida TODAS as edições do modelo; não criar fila parcial se patch for inválido.
     for change in changes:
         if not isinstance(change, dict):
             raise ValueError("Alteração inválida")
-        filename, code = change.get("arquivo"), change.get("codigo")
-        if filename not in names or filename in seen:
+        filename = change.get("arquivo")
+        if not isinstance(filename, str) or filename not in names or filename in seen:
             raise ValueError("A IA tentou alterar arquivo não fornecido ou duplicado")
-        if not isinstance(code, str):
-            raise ValueError("Proposta sem código completo")
         seen.add(filename)
-        # Nenhuma alteração é aplicada aqui. Somente staging com SHA da versão original.
-        proposal = propose_write(filename, code, str(change.get("motivo", ""))[:400])
+        original = source_by_name[filename]
+        edits = change.get("substituicoes")
+        if isinstance(edits, list):
+            if not 1 <= len(edits) <= 12:
+                raise ValueError("Cada arquivo deve ter de 1 a 12 substituições")
+            code = original
+            for edit in edits:
+                if not isinstance(edit, dict) or not isinstance(edit.get("antes"), str) or not isinstance(edit.get("depois"), str):
+                    raise ValueError("Substituição inválida: informe antes e depois")
+                before, after = edit["antes"], edit["depois"]
+                if not before or code.count(before) != 1:
+                    raise ValueError("Trecho original ausente ou ambíguo em " + filename +
+                                     ". A IA deve ler o arquivo e usar texto exato")
+                code = code.replace(before, after, 1)
+        else:
+            code = change.get("codigo")
+            if not isinstance(code, str):
+                raise ValueError("Proposta precisa conter codigo completo ou substituicoes")
+        if len(code.encode("utf-8")) > 256 * 1024:
+            raise ValueError("Arquivo proposto excede 256 KiB")
+        prepared.append((filename, code, str(change.get("motivo", ""))[:400]))
+    for filename, code, motive in prepared:
+        # A IA NÃO grava diretamente: o clique humano aprova a diferença real.
+        proposal = propose_write(filename, code, motive)
         if proposal.get("id"):
             staged.append({"id": proposal["id"], "arquivo": filename,
                            "motivo": proposal.get("descricao", "")})
