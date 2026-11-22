@@ -1,4 +1,4 @@
-/* WMK Code Studio — Assistente Groq/Ollama v0.7.6.
+/* WMK Code Studio — Assistente Groq/Ollama v0.7.8.
    Não grava arquivo. Propostas precisam de revisão e salvamento manual. */
 (function () {
   const $ = id => document.getElementById(id);
@@ -24,6 +24,13 @@
     <label style="font-size:12px"><input type="checkbox" id="ai-consent"> Autorizo enviar o texto do editor ao provedor escolhido nesta consulta.</label>
     <button type="button" id="ai-ask">Analisar arquivo com IA</button>
     <button type="button" id="ai-compare" disabled>Comparar sugestão lado a lado</button>
+    <button type="button" id="ai-config-key">🔑 Configurar chave Groq no Windows</button>
+    <div id="ai-key-box" style="display:none;border:1px solid #39657b;padding:8px;border-radius:6px">
+      <label for="ai-key-value">Cole sua chave Groq (será salva criptografada por DPAPI)</label>
+      <input id="ai-key-value" type="password" autocomplete="off" spellcheck="false" placeholder="gsk_...">
+      <button type="button" id="ai-key-save">Salvar chave protegida</button>
+      <small>Somente no seu computador. Nunca incluída no projeto, no GitHub ou no histórico do chat.</small>
+    </div>
     <button type="button" id="ai-check">Verificar configuração</button>
     <button type="button" id="ai-ping">Testar resposta do provedor (sem arquivo)</button>
     <div id="ai-provider-state" class="muted">Clique em Verificar antes de testar uma análise.</div>
@@ -170,6 +177,28 @@
       setState('Teste falhou: '+e.message);
     }finally{$('ai-ping').disabled=false;}
   }
+  $('ai-config-key').onclick=()=>{
+    const box=$('ai-key-box');
+    box.style.display = box.style.display==='none' ? 'grid' : 'none';
+  };
+  $('ai-key-save').onclick=async()=>{
+    const value=$('ai-key-value').value.trim();
+    if(value.length<16)return setState('Informe sua chave Groq completa no campo protegido.');
+    $('ai-key-save').disabled=true;
+    try{
+      const response=await fetch('/api/credentials/save',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name:'GROQ_API_KEY',value})
+      });
+      const data=await response.json();
+      if(!response.ok)throw Error(data.erro||('HTTP '+response.status));
+      $('ai-key-value').value='';
+      $('ai-key-box').style.display='none';
+      setState('Chave Groq protegida no Windows. Agora use Testar resposta do provedor.');
+      await checkProvider();
+    }catch(e){setState('Não foi possível configurar Groq: '+e.message)}
+    finally{$('ai-key-save').disabled=false}
+  };
   $('ai-ask').onclick = ask;
   $('ai-ping').onclick = pingProvider;
   $('ai-check').onclick = checkProvider;
