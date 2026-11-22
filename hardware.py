@@ -7,6 +7,7 @@ import os
 import platform
 import subprocess
 import time
+from security_policy import require_diagnostic_mode
 
 _CACHE = None
 _CACHE_AT = 0.0
@@ -64,6 +65,7 @@ def _ps_inventory() -> dict:
 
 def hardware_info() -> dict:
     """Consulta cacheada por 30 segundos. Não exibe números de série nem IP."""
+    require_diagnostic_mode()
     global _CACHE, _CACHE_AT
     now = time.monotonic()
     if _CACHE is not None and now - _CACHE_AT < 30:
