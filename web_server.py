@@ -10,6 +10,7 @@ from hardware import hardware_info
 from powershell_tools import catalog, run_action
 from workspace import workspace_status
 from editor_backend import list_files, open_file, proposal, save_file
+from code_ai import ai_status, suggest_code
 
 HOST, PORT = "127.0.0.1", 8767
 DASHBOARD = Path(__file__).parent / "web" / "index.html"
@@ -40,6 +41,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
                 return
+            if route == "/api/ai/status":
+                return self.reply(ai_status())
             if route == "/api/workspace/status":
                 return self.reply(workspace_status())
             if route == "/api/editor/list":
@@ -73,17 +76,19 @@ class Handler(BaseHTTPRequestHandler):
         if host not in (f"127.0.0.1:{PORT}", f"localhost:{PORT}") or origin not in allowed:
             return self.reply({"erro": "Origem não autorizada"}, 403)
         route = urlparse(self.path).path
-        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save"):
+        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest"):
             return self.reply({"erro": "Rota desconhecida"}, 404)
         if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
             return self.reply({"erro": "Content-Type deve ser application/json"}, 415)
         try:
             size = int(self.headers.get("Content-Length", "0"))
-            if not 1 <= size <= (550000 if route.startswith("/api/editor/") else 1024):
+            if not 1 <= size <= (110000 if route == "/api/ai/suggest" else (550000 if route.startswith("/api/editor/") else 1024)):
                 return self.reply({"erro": "Requisição muito grande"}, 413)
             data = json.loads(self.rfile.read(size))
             if not isinstance(data, dict):
                 return self.reply({"erro": "JSON inválido"}, 400)
+            if route == "/api/ai/suggest":
+                return self.reply(suggest_code(data))
             if route == "/api/powershell/diagnose":
                 if type(data.get("action")) is not str:
                     return self.reply({"erro": "Ação inválida"}, 400)
