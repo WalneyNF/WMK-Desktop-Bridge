@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.6.0 (protótipo local: Central de Agentes e Blender)** · Interface em português do Brasil.
+> Versão: **0.7.3 (protótipo: MCP seguro de arquivos com revisão humana)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -22,6 +22,9 @@ Criar uma alternativa independente para diagnósticos locais de disco e arquivos
 | Copiar inventário e exportar relatórios TXT/JSON | ✅ |
 | Agente experimental Groq com ferramentas de leitura permitidas | ✅ |
 | Servidor MCP local via stdio | ✅ |
+| Servidor MCP mínimo para acessar uma pasta e propor alterações | ✅ Protótipo |
+| Fila de alterações com diff, SHA e aprovação pelo painel | ✅ Protótipo, testes de campo pendentes |
+| Plugin ChatGPT conectado ao Windows | ❌ Ainda exige conexão/túnel e permissão da conta |
 | Pasta única autorizada para agentes (somente leitura) | ✅ |
 | Monaco Code Studio, diff, hash e backup para edição manual | ✅ Protótipo |
 | IA integrada ao Monaco com Groq/Ollama e propostas lado a lado | ✅ Protótipo, sujeito a testes Windows |
@@ -33,6 +36,16 @@ Criar uma alternativa independente para diagnósticos locais de disco e arquivos
 | Executar PowerShell arbitrário pela IA | ❌ Não permitido |
 | Excluir arquivos pela IA | 🔒 Bloqueado: nenhuma ferramenta de exclusão |
 | Controle remoto pelo ChatGPT web | ❌ Não implementado |
+
+## Conectar o ChatGPT ao WMK Desktop Bridge
+
+**O servidor MCP local não se instala automaticamente nesta conversa.** Para usar o WMK como o Desktop Commander, é preciso adicionar uma conexão MCP ao ChatGPT, normalmente por **Secure MCP Tunnel** ou por um gateway HTTPS autenticado. O ChatGPT web não chama processos Python locais diretamente.
+
+O projeto possui `mcp_workspace_safe.py`, um MCP mínimo que expõe somente listagem, leitura e **propostas de alteração** dentro de `WMK_WORKSPACE`. Uma IA pode propor criar/editar um arquivo sem gravar imediatamente. O usuário confere o diff e aprova no painel `http://127.0.0.1:8767/approvals`. Não existem ferramentas de exclusão, shell ou PowerShell livre neste servidor.
+
+**Guia completo de conexão, passos e limitações:** [manuais/CHATGPT_MCP_WINDOWS.md](manuais/CHATGPT_MCP_WINDOWS.md).
+
+Enquanto o ChatGPT não estiver ligado ao WMK via MCP, ainda podemos atualizar projetos via repositório GitHub conectado. Não afirme que os arquivos locais foram modificados antes de uma chamada MCP bem-sucedida.
 
 ## Instalação no Windows 10/11
 
