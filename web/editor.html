@@ -7,7 +7,7 @@ body{margin:0}header{height:58px;display:flex;align-items:center;gap:12px;backgr
 strong{color:#6de7ec}button,input,textarea{font:inherit}button{background:#18435a;border:1px solid #35718b;color:#e5f5fa;border-radius:5px;padding:8px 10px;cursor:pointer}button:hover{background:#28617e}button:disabled{opacity:.45;cursor:not-allowed}
 input{padding:8px;background:#091927;color:#e9f6fd;border:1px solid #3a6077;border-radius:5px}
 main{display:grid;grid-template-columns:255px minmax(300px,1fr) 320px;height:calc(100vh - 90px);gap:6px;padding:6px}
-aside,.editor-pane{background:#101f2f;border:1px solid #2b465a;border-radius:7px;min-width:0;overflow:hidden;display:flex;flex-direction:column}
+aside,.editor-pane{background:#101f2f;border:1px solid #2b465a;border-radius:7px;min-width:0;overflow:hidden;display:flex;flex-direction:column}main > aside:last-child{overflow-y:auto}main > aside:last-child #diff{flex:0 0 auto;min-height:120px;max-height:220px}main > aside:last-child #suggestion{min-height:130px;flex-shrink:0}
 .panel-title{background:#1d3448;padding:9px 10px;font-weight:600;display:flex;gap:6px;align-items:center;justify-content:space-between}
 #tree{flex:1;overflow:auto;padding:10px}#tree button{display:block;text-align:left;width:100%;background:transparent;border:0;padding:5px;color:#d7e8f1;overflow-wrap:anywhere}#tree button:hover{background:#22465a}
 .toolbar{display:flex;gap:5px;padding:7px;flex-wrap:wrap;align-items:center}.toolbar input{flex:1;min-width:125px}
