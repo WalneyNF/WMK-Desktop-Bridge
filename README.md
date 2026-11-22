@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.7.8 (Groq configurável pelo Code Studio, com DPAPI Windows)** · Interface em português do Brasil.
+> Versão: **0.7.9 (painel de resposta Groq/Ollama ampliado ao lado do Monaco)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -127,6 +127,14 @@ O Code Studio antes consultava apenas `GROQ_API_KEY` no ambiente do processo Pyt
 **Segurança:** DPAPI protege a chave em repouso para o usuário Windows, mas não impede outro programa malicioso executado com essa mesma conta de recuperar credenciais. A interface HTTP local ainda não possui autenticação forte por sessão; não exponha a porta 8767 à rede. O código precisa de validação prática em Windows.
 
 Se o teste retornar **HTTP 403/1010** depois de cadastrar a chave, é um problema distinto: o provedor/Cloudflare está recusando a conexão. Não significa que a chave está ausente, e não há garantia de que o WMK possa contornar o bloqueio.
+
+## Code Studio v0.7.9 — resposta da IA ao lado do Monaco
+
+O painel direito do Code Studio agora é dedicado à **resposta da IA**, com área de leitura ampla e rolável, seleção e cópia do texto integral, identificação do arquivo/provedor/modelo, estado de análise e botão Limpar. A configuração de Groq/Ollama fica recolhível; ao receber a análise, o painel fecha automaticamente as configurações para mostrar a resposta completa, e reabre em caso de erro.
+
+Em telas maiores que 1050px, arraste a divisória à esquerda da resposta para ajustar a largura do painel; o valor fica salvo no navegador. Em telas menores, o editor passa a ter organização adaptativa. A revisão e a comparação de códigos permanecem disponíveis, e nenhuma resposta salva o arquivo sem confirmação.
+
+**Teste:** atualize com `git pull`, reinicie o Python, entre em `http://127.0.0.1:8767/editor`, faça `Ctrl+F5`, abra `exemplos/calculadora/app.js`, clique em **Configurar IA** e escolha **Revisar**. Após receber a resposta, a área à direita exibirá a análise completa, sem misturar o texto com mensagens de status.
 
 ## Instalação no Windows 10/11
 
