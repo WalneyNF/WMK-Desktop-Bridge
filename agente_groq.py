@@ -16,6 +16,7 @@ from bridge import diagnostic, drives, folder_sizes, ollama_models
 from hardware import hardware_info
 from powershell_tools import catalog, run_action, ACTIONS
 from workspace import workspace_status, list_workspace, read_workspace
+from security_policy import project_mode
 
 BASE_URL = "https://api.groq.com/openai/v1/chat/completions"
 TOOLS = {
@@ -57,6 +58,8 @@ def groq_request(messages: list[dict], definitions: list[dict], key: str, model:
 def tool_specs() -> list[dict]:
     result = []
     for name, (_, description, properties) in TOOLS.items():
+        if project_mode() and not name.startswith("wmk_workspace_"):
+            continue
         required = ["path"] if name == "wmk_folder_sizes" else (["action"] if name == "wmk_powershell_diagnose" else (["relative"] if name == "wmk_workspace_read" else []))
         result.append({"type": "function", "function": {
             "name": name, "description": description,
@@ -93,8 +96,8 @@ def run_question(question: str) -> str:
             name = fn.get("name", "")
             try:
                 args = json.loads(fn.get("arguments") or "{}")
-                if name not in TOOLS:
-                    raise ValueError("Ferramenta não autorizada")
+                if name not in TOOLS or (project_mode() and not name.startswith("wmk_workspace_")):
+                    raise ValueError("Ferramenta não autorizada no modo pasta única")
                 if not isinstance(args, dict):
                     raise ValueError("Parâmetros inválidos")
                 function = TOOLS[name][0]
