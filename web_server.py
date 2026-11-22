@@ -25,6 +25,7 @@ EDITOR_AI = Path(__file__).parent / "web" / "editor_ai.js"
 AGENTS_HTML = Path(__file__).parent / "web" / "agents.html"
 MEDIA_HTML = Path(__file__).parent / "web" / "media.html"
 APPROVALS_HTML = Path(__file__).parent / "web" / "approvals.html"
+CALC_DIR = Path(__file__).parent / "exemplos" / "calculadora"
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -37,6 +38,23 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply({"erro": "Origem não autorizada"}, 403)
         route = urlparse(self.path).path
         try:
+            if route in ("/exemplo/calculadora", "/exemplo/calculadora/",
+                         "/exemplo/calculadora/style.css", "/exemplo/calculadora/app.js"):
+                filename = "index.html" if route in (
+                    "/exemplo/calculadora", "/exemplo/calculadora/") else route.rsplit("/",1)[-1]
+                data = (CALC_DIR / filename).read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/css; charset=utf-8" if filename.endswith(".css")
+                    else ("application/javascript; charset=utf-8" if filename.endswith(".js")
+                    else "text/html; charset=utf-8"))
+                self.send_header("Cache-Control","no-store")
+                self.send_header("X-Content-Type-Options","nosniff")
+                self.send_header("Content-Security-Policy",
+                    "default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; frame-ancestors 'none'")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
             if route == "/editor_ai.js":
                 data = EDITOR_AI.read_bytes()
                 self.send_response(200)
