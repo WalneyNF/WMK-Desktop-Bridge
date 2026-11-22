@@ -17,6 +17,7 @@ from skills_manager import list_skills, save_skill
 from media_lab import image_info, vision_ollama, model_info
 from mcp_approvals import list_pending, get_proposal, approve, reject
 from coding_agent import coding_task
+from credential_store import save as save_credential, status as credential_status
 
 HOST, PORT = "127.0.0.1", 8767
 DASHBOARD = Path(__file__).parent / "web" / "index.html"
@@ -101,6 +102,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(blender_status())
             if route == "/api/blender/objects":
                 return self.reply(blender_objects())
+            if route == "/api/credentials/status":
+                return self.reply(credential_status("GROQ_API_KEY"))
             if route == "/api/ai/status":
                 return self.reply(ai_status())
             if route == "/api/workspace/status":
@@ -136,7 +139,7 @@ class Handler(BaseHTTPRequestHandler):
         if host not in (f"127.0.0.1:{PORT}", f"localhost:{PORT}") or origin not in allowed:
             return self.reply({"erro": "Origem não autorizada"}, 403)
         route = urlparse(self.path).path
-        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest", "/api/agents/register", "/api/agents/propose", "/api/agents/ask", "/api/blender/approve", "/api/skills/save", "/api/media/info", "/api/media/vision", "/api/agents/chat", "/api/mcp/approve", "/api/mcp/reject", "/api/coding/task", "/api/ai/test"):
+        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest", "/api/agents/register", "/api/agents/propose", "/api/agents/ask", "/api/blender/approve", "/api/skills/save", "/api/media/info", "/api/media/vision", "/api/agents/chat", "/api/mcp/approve", "/api/mcp/reject", "/api/coding/task", "/api/ai/test", "/api/credentials/save"):
             return self.reply({"erro": "Rota desconhecida"}, 404)
         if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
             return self.reply({"erro": "Content-Type deve ser application/json"}, 415)
@@ -147,6 +150,8 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(size))
             if not isinstance(data, dict):
                 return self.reply({"erro": "JSON inválido"}, 400)
+            if route == "/api/credentials/save":
+                return self.reply(save_credential(data.get("name"), data.get("value")))
             if route == "/api/ai/test":
                 return self.reply(test_provider(data))
             if route == "/api/coding/task":
