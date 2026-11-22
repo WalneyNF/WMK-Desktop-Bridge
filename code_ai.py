@@ -160,3 +160,37 @@ def suggest_code(payload: dict) -> dict:
     return {"explicacao":explanation[:12000],"codigo":code,"origem":provider,
             "modelo":model,"acao":action,"salvo":False,
             "observacao":"Sugestão não gravada; revise antes de salvar."}
+
+
+def test_provider(payload: dict) -> dict:
+    """Teste mínimo de API sem enviar código, arquivos ou nomes do workspace."""
+    provider = payload.get("provider")
+    model = payload.get("model")
+    consent = payload.get("consent")
+    if consent is not True:
+        raise PermissionError("Autorize a chamada de teste ao provedor")
+    if provider not in ("groq", "ollama"):
+        raise ValueError("Selecione Groq ou Ollama")
+    if not isinstance(model,str) or not re.fullmatch(r"[\\w./:-]{1,90}",model):
+        raise ValueError("Nome de modelo inválido")
+    messages = [{"role":"user","content":"Responda apenas OK."}]
+    if provider == "groq":
+        key = os.getenv("GROQ_API_KEY","").strip()
+        if not key:
+            raise RuntimeError("GROQ_API_KEY ausente no processo Python. Use iniciar-com-chaves.ps1 ou configure a variável e reinicie.")
+        response = _fetch("https://api.groq.com/openai/v1/chat/completions",
+            {"model":model,"messages":messages,"max_completion_tokens":256},
+            {"Content-Type":"application/json","Authorization":"Bearer "+key},45)
+        choice=response.get("choices",[{}])[0]
+        answer=choice.get("message",{}).get("content","")
+        if not answer and choice.get("finish_reason") == "length":
+            raise ValueError("Teste recebeu resposta sem conteúdo por limite de tokens.")
+    else:
+        response = _fetch("http://127.0.0.1:11434/api/chat",
+            {"model":model,"stream":False,"messages":messages},
+            {"Content-Type":"application/json"},55)
+        answer=response.get("message",{}).get("content","")
+    if not isinstance(answer,str) or not answer.strip():
+        raise ValueError("O modelo respondeu sem texto. Experimente outro modelo.")
+    return {"ok":True,"provedor":provider,"modelo":model,"resposta":answer[:200],
+            "codigo_enviado":False,"arquivos_lidos":0}
