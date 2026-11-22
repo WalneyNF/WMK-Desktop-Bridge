@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WMK Code Studio v0.8.2</title>
+<title>WMK Code Studio v0.9.0</title>
 <style>
 :root{color-scheme:dark;font:14px Segoe UI,Arial;background:#0b121c;color:#e1eff7}*{box-sizing:border-box}
 body{margin:0}header{height:58px;display:flex;align-items:center;gap:12px;background:#152537;border-bottom:1px solid #33516b;padding:8px 14px}
@@ -82,8 +82,8 @@ aside,.editor-pane{background:#101f2f;border:1px solid #2b465a;border-radius:7px
 @media(max-width:1050px){main{grid-template-columns:200px minmax(280px,1fr) minmax(320px,.85fr)}#ai-resize-handle{display:none}}
 @media(max-width:800px){header{height:auto;flex-wrap:wrap}main{grid-template-columns:minmax(0,1fr);height:auto}aside,.editor-pane{min-height:260px}#editor,#fallback{height:420px;min-height:420px}#ai-pane{height:620px}#close{margin-left:0}}
 </style></head><body>
-<header><strong>WMK Code Studio</strong> <small>v0.8.2 · Monaco</small><span id="project" class="muted">Carregando pasta...</span>
-<button id="calc-demo" type="button" onclick="window.open('/exemplo/calculadora','_blank')">🧮 Testar calculadora</button><button id="close" type="button">Voltar ao painel</button></header>
+<header><strong>WMK Code Studio</strong> <small>v0.9.0 · Monaco</small><span id="project" class="muted">Carregando pasta...</span>
+<button id="opencode-real" type="button" onclick="location.href='/coder'">🚀 Programar com OpenCode</button><button id="calc-demo" type="button" onclick="window.open('/exemplo/calculadora','_blank')">🧮 Testar calculadora</button><button id="close" type="button">Voltar ao painel</button></header>
 <main>
 <aside><div class="panel-title">📁 Explorador <button id="refresh" type="button">Atualizar</button></div>
 <div class="toolbar"><input id="subdir" placeholder="Subpasta (vazio = raiz)" aria-label="Subpasta"><button id="open-folder">Abrir</button></div>
@@ -102,7 +102,7 @@ aside,.editor-pane{background:#101f2f;border:1px solid #2b465a;border-radius:7px
     <button id="ai-copy-output" type="button">📋 Copiar Markdown</button>
     <button id="ai-export-md" type="button">⬇ Salvar .md</button>
     <button id="ai-clear-output" type="button">Limpar</button>
-    <button id="ai-open-project" type="button">🛠 Trabalhar no projeto</button>
+    <button id="ai-open-project" type="button">🛠 Propostas antigas (limitado)</button>
   </div>
   <div id="ai-meta">Nenhuma análise recebida</div>
   <article id="ai-output" data-state="empty" aria-label="Texto da resposta do agente" aria-live="polite">Abra um arquivo no Monaco e clique em Configurar IA para escolher Groq/Ollama e solicitar uma revisão. A resposta aparecerá aqui, ao lado do código.</article>
