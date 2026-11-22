@@ -54,6 +54,26 @@ class ProjectAgentTests(unittest.TestCase):
         self.assertIn("aria-label", (self.folder / "index.html").read_text(encoding="utf-8"))
 
     @patch("project_agent._request")
+    def test_groq_request_disables_remote_json_mode(self, request):
+        request.return_value='{"resumo":"ok","alteracoes":[]}'
+        project_agent.project_task(self.task())
+        self.assertIs(request.call_args.kwargs["json_mode"], False)
+        self.assertEqual(request.call_args.kwargs["max_completion_tokens"], 8192)
+
+    @patch("project_agent._request")
+    def test_json_in_markdown_fence_accepted(self, request):
+        request.return_value='```json\\n{"resumo":"Sem problemas","alteracoes":[]}\\n```'
+        result=project_agent.project_task(self.task())
+        self.assertEqual(result["status"],"sem_alteracoes")
+
+    @patch("project_agent._request")
+    def test_invalid_json_never_creates_proposal(self, request):
+        request.return_value='Corrigi tudo no seu arquivo.'
+        with self.assertRaisesRegex(ValueError,"JSON válido"):
+            project_agent.project_task(self.task())
+        self.assertEqual(mcp_approvals.list_pending(), [])
+
+    @patch("project_agent._request")
     def test_false_claim_without_changes_does_not_write(self, request):
         request.return_value = '{"resumo":"Corrigido", "alteracoes":[]}'
         result=project_agent.project_task(self.task())
