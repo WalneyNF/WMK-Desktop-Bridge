@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WMK Code Studio v0.5.0</title>
+<style>
+:root{color-scheme:dark;font:14px Segoe UI,Arial;background:#0b121c;color:#e1eff7}*{box-sizing:border-box}
+body{margin:0}header{height:58px;display:flex;align-items:center;gap:12px;background:#152537;border-bottom:1px solid #33516b;padding:8px 14px}
+strong{color:#6de7ec}button,input,textarea{font:inherit}button{background:#18435a;border:1px solid #35718b;color:#e5f5fa;border-radius:5px;padding:8px 10px;cursor:pointer}button:hover{background:#28617e}button:disabled{opacity:.45;cursor:not-allowed}
+input{padding:8px;background:#091927;color:#e9f6fd;border:1px solid #3a6077;border-radius:5px}
+main{display:grid;grid-template-columns:255px minmax(300px,1fr) 320px;height:calc(100vh - 90px);gap:6px;padding:6px}
+aside,.editor-pane{background:#101f2f;border:1px solid #2b465a;border-radius:7px;min-width:0;overflow:hidden;display:flex;flex-direction:column}
+.panel-title{background:#1d3448;padding:9px 10px;font-weight:600;display:flex;gap:6px;align-items:center;justify-content:space-between}
+#tree{flex:1;overflow:auto;padding:10px}#tree button{display:block;text-align:left;width:100%;background:transparent;border:0;padding:5px;color:#d7e8f1;overflow-wrap:anywhere}#tree button:hover{background:#22465a}
+.toolbar{display:flex;gap:5px;padding:7px;flex-wrap:wrap;align-items:center}.toolbar input{flex:1;min-width:125px}
+#editor{flex:1;min-height:240px}#fallback{display:none;flex:1;width:100%;background:#101822;color:#e7f7ff;border:0;padding:15px;font:13px/1.55 Consolas,monospace;resize:none}
+#diff{flex:1;white-space:pre-wrap;overflow:auto;margin:0;padding:10px;font:12px/1.45 Consolas,monospace}
+#suggestion{height:150px;width:100%;resize:vertical;background:#0a1826;color:#ecf5f7;border:1px solid #3c6178;padding:10px}
+.muted{color:#9eb6c6;font-size:12px}footer{height:32px;padding:7px 15px;background:#17283a;color:#9db7c9}
+#feedback{padding:7px 10px;color:#81d9e8;border-top:1px solid #314a5b;min-height:32px}
+#close{margin-left:auto}code{color:#7bd8ef}
+@media(max-width:950px){main{grid-template-columns:1fr;height:auto}aside,.editor-pane{min-height:280px}#editor,#fallback{height:450px}#diff{height:200px}#close{margin-left:0}}
+</style></head><body>
+<header><strong>WMK Code Studio</strong> <small>v0.5.0 · Monaco</small><span id="project" class="muted">Carregando pasta...</span>
+<button id="close" type="button">Voltar ao painel</button></header>
+<main>
+<aside><div class="panel-title">📁 Explorador <button id="refresh" type="button">Atualizar</button></div>
+<div class="toolbar"><input id="subdir" placeholder="Subpasta (vazio = raiz)" aria-label="Subpasta"><button id="open-folder">Abrir</button></div>
+<div id="tree">Configure WMK_WORKSPACE antes de iniciar.</div></aside>
+<section class="editor-pane"><div class="panel-title">✏️ Editor <span id="state" class="muted">Nenhum arquivo</span></div>
+<div class="toolbar"><input id="filename" aria-label="Nome relativo do arquivo" placeholder="src/exemplo.py">
+<button id="new">Novo</button><button id="preview">Comparar</button><button id="save">Salvar após revisão</button></div>
+<div id="editor"></div><textarea id="fallback" spellcheck="false" placeholder="Código-fonte..."></textarea>
+<div id="feedback">O arquivo só é salvo após sua confirmação explícita.</div></section>
+<aside><div class="panel-title">🔎 Revisão e IA</div>
+<p class="muted" style="padding:0 10px">Confira o diff antes de gravar. As sugestões da IA não alteram o código automaticamente.</p>
+<pre id="diff">Abra ou crie um arquivo e clique em Comparar.</pre>
+<div class="panel-title">💡 Sugestões da IA (manual)</div>
+<textarea id="suggestion" placeholder="Cole aqui sugestões do Groq/Ollama para avaliar. Esta versão não faz chamadas de IA pelo editor."></textarea>
+<div class="toolbar"><button id="copy-code">Copiar código</button><button id="copy-suggestion">Copiar sugestão</button></div>
+</aside></main>
+<footer>Walney Moreira Klein — walneyk@hotmail.com · Licença MIT · edição local restrita</footer>
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+<script>
+let currentPath='',expectedSha=null,savedText='',monacoEditor=null;
+const $=id=>document.getElementById(id);
+function feedback(text){$('feedback').textContent=text}
+function getText(){return monacoEditor?monacoEditor.getValue():$('fallback').value}
+function setText(text,path){
+ const ext=(path.split('.').pop()||'').toLowerCase();
+ const langs={py:'python',js:'javascript',jsx:'javascript',ts:'typescript',tsx:'typescript',html:'html',css:'css',json:'json',md:'markdown',xml:'xml',php:'php',sql:'sql',rs:'rust',go:'go',java:'java',cs:'csharp',c:'c',cpp:'cpp',h:'cpp',hpp:'cpp',sh:'shell',ps1:'powershell',yml:'yaml',yaml:'yaml'};
+ if(monacoEditor){monacoEditor.setValue(text);monaco.editor.setModelLanguage(monacoEditor.getModel(),langs[ext]||'plaintext')}
+ else $('fallback').value=text;
+}
+async function api(path,body){
+ const options=body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)};
+ const response=await fetch(path,options);const data=await response.json();
+ if(!response.ok)throw Error(data.erro||'HTTP '+response.status);
+ return data;
+}
+async function status(){try{let d=await api('/api/workspace/status');$('project').textContent=d.configurado?d.pasta:'Pasta não configurada';if(d.configurado)await list();else feedback(d.erro||'Configure WMK_WORKSPACE');}catch(e){feedback(e.message)}}
+async function list(subdir=''){
+ try{const data=await api('/api/editor/list?subdir='+encodeURIComponent(subdir));$('tree').replaceChildren();const current=subdir?subdir.replaceAll('\\','/').replace(/\/$/,'')+'/':'';
+ if(subdir){const back=document.createElement('button');back.textContent='📂 .. (voltar)';back.onclick=()=>{const parts=subdir.replaceAll('\\','/').split('/');parts.pop();list(parts.join('/'))};$('tree').append(back)}
+ for(const item of data.itens){const b=document.createElement('button');b.textContent=(item.tipo==='pasta'?'📁 ':'📄 ')+item.nome;b.onclick=()=>item.tipo==='pasta'?list(item.caminho_relativo):openFile(item.caminho_relativo);$('tree').append(b)}
+ $('subdir').value=subdir;
+ }catch(e){feedback('Falha ao listar: '+e.message)}
+}
+async function openFile(path){if(getText()!==savedText&&!confirm('Descartar alterações não salvas?'))return;
+ try{const d=await api('/api/editor/open?path='+encodeURIComponent(path));currentPath=path;expectedSha=d.sha256;savedText=d.conteudo;setText(savedText,path);$('filename').value=path;$('state').textContent=path;$('diff').textContent='Clique em Comparar para revisar.';feedback('Arquivo aberto: '+path)}
+ catch(e){feedback('Não foi possível abrir: '+e.message)}}
+function newFile(){if(getText()!==savedText&&!confirm('Descartar alterações não salvas?'))return;const name=$('filename').value.trim();if(!name)return feedback('Digite o nome relativo do novo arquivo.');currentPath=name;expectedSha=null;savedText='';setText('',name);$('state').textContent='Novo: '+name;feedback('Novo arquivo preparado. Digite o código e compare.')}
+async function preview(){const name=$('filename').value.trim();if(!name)return feedback('Informe o caminho do arquivo.');try{const d=await api('/api/editor/preview',{path:name,content:getText(),sha256:expectedSha});$('diff').textContent=d.diff||'(Nenhuma alteração)';feedback(d.diff_truncado?'Diff muito grande: divida a edição.':'Prévia gerada. Revise o diff antes de salvar.');return d}catch(e){feedback('Não foi possível comparar: '+e.message)}}
+async function save(){const name=$('filename').value.trim();if(name!==currentPath)return feedback('O caminho foi alterado: use Novo ou reabra o arquivo.');const d=await preview();if(!d||d.diff_truncado||!d.mudou)return;
+ if(!confirm('CONFIRMAR gravação do arquivo dentro do workspace?\n\n'+name+'\nSerá feito backup se já existir.'))return;
+ try{const result=await api('/api/editor/save',{path:name,content:getText(),sha256:expectedSha});
+ expectedSha=result.sha256;savedText=getText();feedback('Salvo com sucesso. Backup: '+(result.backup||'arquivo novo'));await list($('subdir').value)}
+ catch(e){feedback('Falha ao salvar: '+e.message)}}
+$('new').onclick=newFile;$('preview').onclick=preview;$('save').onclick=save;$('refresh').onclick=()=>list($('subdir').value);
+$('open-folder').onclick=()=>list($('subdir').value);$('close').onclick=()=>location.assign('/');
+$('copy-code').onclick=()=>navigator.clipboard.writeText(getText()).then(()=>feedback('Código copiado.')).catch(e=>feedback(e.message));
+$('copy-suggestion').onclick=()=>navigator.clipboard.writeText($('suggestion').value).then(()=>feedback('Sugestão copiada.')).catch(e=>feedback(e.message));
+window.addEventListener('beforeunload',e=>{if(getText()!==savedText){e.preventDefault();e.returnValue=''}});
+if(typeof require==='function'&&typeof require.config==='function'){
+ require.config({paths:{vs:'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs'}});
+ window.MonacoEnvironment={getWorkerUrl:()=>URL.createObjectURL(new Blob(["self.MonacoEnvironment={baseUrl:'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/'};importScripts('https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/base/worker/workerMain.js');"],{type:'text/javascript'}))};
+ require(['vs/editor/editor.main'],()=>{
+ monacoEditor=monaco.editor.create($('editor'),{value:'',language:'plaintext',theme:'vs-dark',automaticLayout:true,minimap:{enabled:true},wordWrap:'on',fontSize:13,scrollBeyondLastLine:false});
+ monacoEditor.addCommand(monaco.KeyMod.CtrlCmd|monaco.KeyCode.KeyS,save);
+ monacoEditor.onDidChangeModelContent(()=>{$('state').textContent=currentPath+(getText()===savedText?'':' ●')});
+ },()=>{$('editor').style.display='none';$('fallback').style.display='block';feedback('Monaco não carregou; editor de texto alternativo disponível.')});
+}else{$('editor').style.display='none';$('fallback').style.display='block';feedback('Monaco indisponível; editor alternativo disponível.')}
+status();
+</script></body></html>
