@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.3.0 (protótipo local, somente leitura)** · Interface em português do Brasil.
+> Versão: **0.3.1 (protótipo local, somente leitura)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -19,6 +19,8 @@ Criar uma alternativa independente para diagnósticos locais de disco e arquivos
 | Calcular tamanho de subpastas (limite de varredura) | ✅ |
 | Consultar modelos do Ollama (API local, fallback CLI) | ✅ |
 | Inventário Windows de CPU, RAM, GPU, rede, placa-mãe e discos físicos via CIM | ✅ |
+| Copiar inventário e exportar relatórios TXT/JSON | ✅ |
+| Agente experimental Groq com ferramentas de leitura permitidas | ✅ |
 | Servidor MCP local via stdio | ✅ |
 | Painel HTML local com painéis móveis, redimensionáveis e layout persistente | ✅ |
 | Executar PowerShell pela IA | ❌ Não implementado |
@@ -121,6 +123,26 @@ Um painel **Hardware e sistema** foi acrescentado ao dashboard, com arraste e re
 
 Os dados dependem dos drivers e do acesso CIM; campos ausentes ou incorretos devem ser tratados como indisponíveis, não estimados. Não inclui monitoramento de sensores ou temperatura nesta versão.
 
+## Exportação do hardware e licença MIT
+
+Na versão **0.3.1**, o painel **Hardware e sistema** contém botões **Copiar**, **TXT** e **JSON**. Eles utilizam recursos do próprio navegador, sem escrever arquivos diretamente pelo servidor Python. Os dados exportados omitem **endereços MAC**. Revise o restante do relatório antes de compartilhá-lo.
+
+Este projeto está sob a **licença MIT**: consulte [LICENSE](LICENSE). São permitidos uso, modificação e distribuição, inclusive comercial, desde que respeitadas as condições de aviso de direitos autorais e licença.
+
+## Agentes de IA e Groq
+
+**Sim, outras IAs podem utilizar as ferramentas.** O MCP usa protocolo interoperável para clientes compatíveis; o exemplo `agente_groq.py` emprega chamadas de ferramentas (**function calling**) diretamente pela API Groq, com uma lista restrita de funções disponíveis. Isso **não configura automaticamente um plugin no ChatGPT web**.
+
+```powershell
+$env:GROQ_API_KEY = "SUA_CHAVE"
+$env:GROQ_MODEL = "openai/gpt-oss-20b"
+py agente_groq.py
+```
+
+O modelo precisa estar disponível na sua conta e suportar tool calling. Evite inserir sua chave em arquivos versionados. O agente pede consentimento no terminal, envia as perguntas e resultados de ferramentas à API Groq e não pode executar PowerShell livre, apagar arquivos ou modificar projetos. Quotas e cobrança dependem do provedor.
+
+**Manual completo:** [manuais/PRIMEIROS_PASSOS.md](manuais/PRIMEIROS_PASSOS.md).
+
 ## Segurança
 
 - Todas as ferramentas são **somente leitura**.
@@ -136,6 +158,7 @@ Os dados dependem dos drivers e do acesso CIM; campos ausentes ou incorretos dev
 ```text
 WMK-Desktop-Bridge/
 ├── bridge.py                # núcleo de leitura e diagnóstico
+├── agente_groq.py            # agente experimental Groq com tool calling
 ├── hardware.py              # inventário de hardware via CIM
 ├── mcp_server.py            # seis ferramentas MCP via stdio
 ├── web_server.py            # API/painel local HTTP
@@ -144,12 +167,14 @@ WMK-Desktop-Bridge/
 ├── iniciar-mcp.bat
 ├── requirements.txt
 ├── .gitignore
+├── LICENSE                   # licença MIT
+├── manuais/PRIMEIROS_PASSOS.md
 └── README.md
 ```
 
 ## Roadmap
 
-- **v0.3:** inventário de hardware implementado; análise de caches, relatórios e testes automatizados ainda pendentes.
+- **v0.3.1:** inventário e exportação TXT/JSON implementados, exemplo de agente Groq incluído; análise de caches e testes automatizados ainda pendentes.
 - **v0.4:** fila de operações de escrita com revisão humana, cópia de segurança e permissões por ferramenta.
 - **v0.5:** executor PowerShell com política restritiva, tempo limite e logs; nunca acesso irrestrito por padrão.
 - **v0.6:** agente remoto autenticado, transporte seguro e integração documentada com clientes compatíveis.
@@ -160,7 +185,7 @@ Pull requests e relatos de problemas são bem-vindos. Descreva o Windows, versã
 
 ## Licença
 
-**Ainda não foi selecionada uma licença.** O repositório é público para consulta; para permitir reutilização, distribuição e alterações com condições claras, o mantenedor deve adicionar uma licença (por exemplo, MIT).
+**Licença MIT**, arquivo [LICENSE](LICENSE). Reprodução do aviso de copyright e texto da licença obrigatória em cópias substanciais.
 
 ---
 **WMK — Walney Moreira Klein** · **walneyk@hotmail.com**
