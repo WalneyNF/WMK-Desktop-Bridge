@@ -9,8 +9,9 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+from security_policy import require_diagnostic_mode, policy_status
 
-VERSION = "0.4.1"
+VERSION = "0.5.0"
 GIB = 1024 ** 3
 
 
@@ -40,6 +41,7 @@ def safe_path(value: str) -> Path:
 
 
 def drives() -> list[dict]:
+    require_diagnostic_mode()
     candidates = [f"{letter}:\\" for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"] if os.name == "nt" else ["/"]
     result = []
     for drive in candidates:
@@ -110,6 +112,7 @@ def folder_sizes(path: str, limit: int = 20, max_files: int = 200000) -> dict:
 
 
 def ollama_models() -> dict:
+    require_diagnostic_mode()
     """Preferir API HTTP local do Ollama; CLI apenas como alternativa.
 
     A API normalmente responde sem precisar aguardar o executável 'ollama list'.
@@ -161,8 +164,8 @@ def ollama_models() -> dict:
 
 def diagnostic() -> dict:
     return {"aplicativo": "WMK Desktop Bridge", "versao": VERSION,
-            "modo": "somente leitura", "sistema": sys.platform,
-            "raizes_autorizadas": [str(p) for p in allowed_roots()], "unidades": drives()}
+            "politica": policy_status(), "sistema": sys.platform,
+            "raizes_autorizadas": [str(p) for p in allowed_roots()], "unidades": [] if policy_status()["modo"] == "projeto_restrito" else drives()}
 
 
 if __name__ == "__main__":
