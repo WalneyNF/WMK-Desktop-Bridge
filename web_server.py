@@ -10,7 +10,7 @@ from hardware import hardware_info
 from powershell_tools import catalog, run_action
 from workspace import workspace_status
 from editor_backend import list_files, open_file, proposal, save_file
-from code_ai import ai_status, suggest_code
+from code_ai import ai_status, suggest_code, test_provider
 from agent_hub import list_agents, register_agent, providers_status, propose, ask_workspace, chat_agent
 from blender_client import status as blender_status, list_objects as blender_objects, execute_approved
 from skills_manager import list_skills, save_skill
@@ -129,7 +129,7 @@ class Handler(BaseHTTPRequestHandler):
         if host not in (f"127.0.0.1:{PORT}", f"localhost:{PORT}") or origin not in allowed:
             return self.reply({"erro": "Origem não autorizada"}, 403)
         route = urlparse(self.path).path
-        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest", "/api/agents/register", "/api/agents/propose", "/api/agents/ask", "/api/blender/approve", "/api/skills/save", "/api/media/info", "/api/media/vision", "/api/agents/chat", "/api/mcp/approve", "/api/mcp/reject", "/api/coding/task"):
+        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest", "/api/agents/register", "/api/agents/propose", "/api/agents/ask", "/api/blender/approve", "/api/skills/save", "/api/media/info", "/api/media/vision", "/api/agents/chat", "/api/mcp/approve", "/api/mcp/reject", "/api/coding/task", "/api/ai/test"):
             return self.reply({"erro": "Rota desconhecida"}, 404)
         if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
             return self.reply({"erro": "Content-Type deve ser application/json"}, 415)
@@ -140,6 +140,8 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(size))
             if not isinstance(data, dict):
                 return self.reply({"erro": "JSON inválido"}, 400)
+            if route == "/api/ai/test":
+                return self.reply(test_provider(data))
             if route == "/api/coding/task":
                 return self.reply(coding_task(data.get("agent_id"), data.get("task"), data.get("consent")))
             if route == "/api/mcp/approve":
