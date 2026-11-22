@@ -122,8 +122,6 @@ def start() -> dict:
                 {"action": "tool.use", "resource": "external_directory:*", "effect": "deny"}
             ]
         })
-        logs = config.parent / "wmk-opencode-runtime.log"
-        LOG = logs.open("ab", buffering=0)
         command = [exe, "serve", "--hostname", "127.0.0.1", "--port", str(PORT)]
         # NPM no Windows pode publicar 'opencode.cmd'; Python não o executa
         # diretamente como um .exe. Somente o caminho já resolvido pelo PATH
@@ -135,12 +133,10 @@ def start() -> dict:
             PROCESS = subprocess.Popen(
                 command,
                 cwd=str(root), env=env, stdin=subprocess.DEVNULL,
-                stdout=LOG, stderr=subprocess.STDOUT,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
         except (OSError, ValueError) as exc:
-            LOG.close()
-            LOG = None
             PROCESS = None
             raise RuntimeError("Não foi possível iniciar OpenCode: " + str(exc)) from exc
         PASSWORD = password
@@ -151,8 +147,8 @@ def start() -> dict:
     for _ in range(22):
         if PROCESS.poll() is not None:
             raise RuntimeError(
-                "OpenCode encerrou ao iniciar. Consulte config/wmk-opencode-runtime.log "
-                "e execute 'opencode serve --help'."
+                "OpenCode encerrou ao iniciar. Confira \"opencode serve --help\" "
+                "e use a interface manual do OpenCode para diagnosticar."
             )
         if _healthy(password):
             return {"ativo": True, "url": URL, "senha": password, "pasta": str(root),
@@ -160,7 +156,7 @@ def start() -> dict:
         time.sleep(0.35)
     raise RuntimeError(
         "OpenCode ainda não respondeu no localhost:4097. Confira a versão instalada "
-        "e config/wmk-opencode-runtime.log. Nenhuma tarefa foi enviada à IA."
+        "e se a porta está livre. Nenhuma tarefa foi enviada à IA."
     )
 
 
@@ -182,9 +178,6 @@ def stop() -> dict:
         PROCESS = None
         PASSWORD = None
         PROJECT = None
-        if LOG:
-            LOG.close()
-            LOG = None
         return {"ativo": False, "mensagem": "Servidor OpenCode iniciado pelo WMK encerrado"}
 
 
