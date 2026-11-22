@@ -2,7 +2,7 @@
 
 **Ponte gratuita e de código aberto entre assistentes de IA e seu computador Windows.**
 
-> Versão: **0.8.1 (agente de projeto lê múltiplos arquivos e prepara modificações reais)** · Interface em português do Brasil.
+> Versão: **0.8.2 (Groq: correção do erro json_validate_failed no agente de projeto)** · Interface em português do Brasil.
 
 **Autor:** Walney Moreira Klein — walneyk@hotmail.com
 
@@ -162,6 +162,23 @@ O agente lê automaticamente o arquivo aberto e até quatro arquivos relacionado
 As propostas podem ser verificadas em `/approvals`. Um relatório que diga "corrigimos" sem patches é mostrado como **zero alterações**. O aplicativo não executa builds, testes, shell ou comandos do projeto; não se deve compará-lo ainda à autonomia completa de Codex.
 
 **Manual e procedimento de teste:** [manuais/AGENTE_PROJETO_MONACO.md](manuais/AGENTE_PROJETO_MONACO.md).
+
+## Correção v0.8.2: Groq HTTP 400 `json_validate_failed`
+
+Esse erro ocorre na geração de propostas do modo **Trabalhar no projeto**: o servidor Groq pode recusar a saída estruturada exigida por `response_format=json_object`, especialmente quando a IA tenta devolver muito código em um único objeto JSON. O WMK agora **não solicita JSON Mode rígido nesse modo**: o modelo devolve texto, e a aplicação valida localmente se é JSON com patches corretos antes de criar qualquer proposta. O modo favorece substituições pequenas de trechos de código, sem reenviar todo o arquivo, e aceita cercas `\`\`\`json` quando presentes. Modelos que não retornarem JSON válido terão a proposta recusada, sem nenhuma gravação.
+
+Após atualizar, **interrompa o servidor antigo** com Ctrl+C e execute:
+
+```powershell
+cd D:\\Ferramentas\\WMK-Desktop-Bridge
+git pull
+$env:WMK_WORKSPACE = 'D:\\Ferramentas\\WMK-Desktop-Bridge'
+py web_server.py
+```
+
+Confirme `0.8.2` em `http://127.0.0.1:8767/api/status`. Em `/editor` use o botão **🛠 Trabalhar no projeto**, abra `exemplos/calculadora/index.html` e peça **"No index.html, adicione aria-label à tecla AC; preserve CSS e JS; proponha uma única alteração pequena"**. Confira o diff e aprove para salvar.
+
+**Limite:** isto corrige o contrato de resposta Groq; não adiciona execução de comandos, builds, testes ou sandbox Codex. A integração real com sua conta Groq e seu navegador Windows ainda requer teste.
 
 ## Instalação no Windows 10/11
 
