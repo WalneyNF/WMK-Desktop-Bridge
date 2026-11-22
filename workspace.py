@@ -22,7 +22,7 @@ MAX_ZIP_ITEM = 20 * 1024 * 1024
 BACKUPS = ".wmk-backups"
 DENIED_NAMES = {".env", ".env.local", ".env.production", ".env.development", "id_rsa", "id_ed25519", "credentials", "credentials.json", "token.json", ".npmrc", ".pypirc", ".netrc", "secrets.json"}
 DENIED_SUFFIXES = {".key", ".pem", ".p12", ".pfx", ".kdbx", ".sqlite", ".db"}
-DENIED_DIRS = {".git", ".ssh", ".aws", ".azure", ".gnupg", ".wmk-backups"}
+DENIED_DIRS = {".git", ".ssh", ".aws", ".azure", ".gnupg", ".wmk-backups", "system volume information", "$recycle.bin", "windows", "program files", "program files (x86)", "programdata", "appdata", "node_modules", "__pycache__"}
 
 
 
@@ -35,7 +35,26 @@ def workspace_root() -> Path:
         raise ValueError("WMK_WORKSPACE não é uma pasta")
     if root.parent == root or (os.name == "nt" and root == Path(root.anchor)):
         raise PermissionError("A raiz de uma unidade não pode ser o espaço de trabalho.")
+    if any(part.lower() in {"windows", "program files", "program files (x86)", "programdata", "system32", "system volume information", "$recycle.bin"} for part in root.parts):
+        raise PermissionError("Diretório de sistema não pode ser usado como workspace")
     return root
+
+
+def _is_reparse_point(path: Path) -> bool:
+    try:
+        attrs = path.lstat().st_file_attributes
+        return bool(attrs & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400))
+    except (OSError, AttributeError):
+        return False
+
+
+def _reject_links(root: Path, path: Path) -> None:
+    cursor = root
+    relative_parts = path.relative_to(root).parts
+    for part in relative_parts:
+        cursor = cursor / part
+        if cursor.is_symlink() or _is_reparse_point(cursor):
+            raise PermissionError("Link simbólico ou junção Windows bloqueado")
 
 
 def _path(relative: str, *, existing: bool = False) -> Path:
@@ -57,6 +76,7 @@ def _path(relative: str, *, existing: bool = False) -> Path:
         raise PermissionError("Caminho fora da pasta autorizada")
     if canonical == root:
         raise PermissionError("Selecione um arquivo ou subpasta, não a raiz")
+    _reject_links(root, candidate)
     return canonical
 
 
@@ -77,7 +97,7 @@ def list_workspace(subdir: str = "", limit: int = 100) -> dict:
     for item in sorted(base.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())):
         if (item.name.lower() in DENIED_DIRS or item.name.lower() in DENIED_NAMES
                 or item.name.lower().startswith(".env.") or item.suffix.lower() in DENIED_SUFFIXES
-                or item.is_symlink()):
+                or item.is_symlink() or _is_reparse_point(item)):
             continue
         try:
             # Resolve também junctions no Windows.
@@ -96,7 +116,7 @@ def list_workspace(subdir: str = "", limit: int = 100) -> dict:
 
 def read_workspace(relative: str) -> dict:
     file = _path(relative, existing=True)
-    if not file.is_file() or file.is_symlink():
+    if not file.is_file() or file.is_symlink() or _is_reparse_point(file):
         raise ValueError("Não é arquivo regular")
     if file.stat().st_size > MAX_READ:
         raise ValueError("Arquivo maior que 256 KiB; leitura integral bloqueada")
@@ -110,7 +130,7 @@ def preview_write(relative: str, content: str) -> dict:
     file = _path(relative)
     if not isinstance(content, str) or len(content.encode("utf-8")) > MAX_WRITE:
         raise ValueError("Conteúdo precisa ser texto UTF-8 com até 256 KiB")
-    if file.exists() and (not file.is_file() or file.is_symlink()):
+    if file.exists() and (not file.is_file() or file.is_symlink() or _is_reparse_point(file)):
         raise ValueError("Destino não é arquivo regular")
     if file.exists() and file.stat().st_size > MAX_READ:
         raise ValueError("Arquivo existente maior que limite de edição")
