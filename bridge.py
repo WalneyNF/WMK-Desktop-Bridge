@@ -10,11 +10,19 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-VERSION = "0.4.0"
+VERSION = "0.4.1"
 GIB = 1024 ** 3
 
 
 def allowed_roots() -> list[Path]:
+    # Se WMK_WORKSPACE estiver definido, TODAS as ferramentas genéricas de arquivos
+    # ficam limitadas à pasta do projeto. Isso prevalece sobre WMK_ALLOWED_ROOTS.
+    workspace = os.getenv("WMK_WORKSPACE", "").strip()
+    if workspace:
+        root = Path(workspace).expanduser().resolve(strict=True)
+        if not root.is_dir() or root.parent == root or root == Path(root.anchor):
+            raise PermissionError("WMK_WORKSPACE deve ser uma subpasta válida, não uma unidade inteira")
+        return [root]
     roots = [Path.home()]
     configured = os.getenv("WMK_ALLOWED_ROOTS", "")
     if configured:
