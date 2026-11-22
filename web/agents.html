@@ -33,10 +33,16 @@ h2{font-size:15px;margin:0;color:#8be5f4}pre{white-space:pre-wrap;overflow-wrap:
 <pre id="blender-status">Blender ainda não consultado.</pre>
 <h2>🧠 Testar agente com Blender</h2>
 <label>Agente ativo <select id="selected-agent"></select></label>
-<label>Pedido <textarea id="task" rows="4">Crie um cubo azul de tamanho 2 à esquerda e uma esfera vermelha à direita. Não apague nada.</textarea></label>
+<label>Pedido <textarea id="task" rows="4">Crie um cubo de tamanho 2 na posição [0,0,1]. Não apague nada.</textarea></label>
 <button id="plan">Gerar proposta com IA (não executa)</button>
 <pre id="proposal-result">Selecione agente, confira permissões e proponha uma tarefa.</pre>
 <div id="approval"><b>Revisão obrigatória</b><p class="small">A execução será feita somente no Blender local. Não há exclusão nem Python remoto. Propostas expiram em 120 segundos.</p><pre id="approval-actions"></pre><button id="approve">Aprovar e executar ações exibidas</button><button id="discard">Descartar proposta</button></div>
+<h2>📄 Agente revisor de código</h2>
+<label>Arquivo relativo na pasta protegida <input id="review-path" placeholder="bridge.py"></label>
+<label>O que deseja saber? <textarea id="review-question" rows="3">Analise este arquivo e indique problemas e melhorias sem modificar o código.</textarea></label>
+<label><input type="checkbox" id="review-consent"> Autorizo enviar o conteúdo deste arquivo ao provedor do agente.</label>
+<button id="review-ask">Analisar arquivo com o agente selecionado</button>
+<pre id="review-result">A análise é somente leitura e exige WMK_WORKSPACE configurado.</pre>
 <h2>🛡️ Política MCP</h2><p class="small">O WMK expõe ferramentas Blender de consulta ao seu servidor MCP. A criação por IA exige aprovação nesta interface; nenhum MCP externo recebe acesso irrestrito. Cadastro de servidores MCP externos e execução de suas ferramentas exigem uma etapa futura com isolamento e revisão.</p>
 </section></main><footer>Walney Moreira Klein — walneyk@hotmail.com · Licença MIT</footer>
 <script>
@@ -77,5 +83,11 @@ const id=pending;clearProposal();$('approve').disabled=true;
 try{text('proposal-result',await api('/api/blender/approve',{proposta:id}))}
 catch(e){text('proposal-result','Falha: '+e.message)}
 finally{$('approve').disabled=false}};
+$('review-ask').onclick=async()=>{
+ const button=$('review-ask');button.disabled=true;text('review-result','Consultando agente...');
+ try{const result=await api('/api/agents/ask',{agent_id:active,relative:$('review-path').value,question:$('review-question').value,consent:$('review-consent').checked});text('review-result',result.resposta); }
+ catch(e){text('review-result','Erro: '+e.message)}
+ finally{button.disabled=false;$('review-consent').checked=false}
+};
 refresh();
 </script></body></html>
