@@ -13,12 +13,15 @@ from editor_backend import list_files, open_file, proposal, save_file
 from code_ai import ai_status, suggest_code
 from agent_hub import list_agents, register_agent, providers_status, propose, ask_workspace
 from blender_client import status as blender_status, list_objects as blender_objects, execute_approved
+from skills_manager import list_skills, save_skill
+from media_lab import image_info, vision_ollama, model_info
 
 HOST, PORT = "127.0.0.1", 8767
 DASHBOARD = Path(__file__).parent / "web" / "index.html"
 EDITOR = Path(__file__).parent / "web" / "editor.html"
 EDITOR_AI = Path(__file__).parent / "web" / "editor_ai.js"
 AGENTS_HTML = Path(__file__).parent / "web" / "agents.html"
+MEDIA_HTML = Path(__file__).parent / "web" / "media.html"
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -41,9 +44,9 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
                 return
-            if route in ("/", "/editor", "/agents"):
+            if route in ("/", "/editor", "/agents", "/media"):
                 is_editor = route == "/editor"
-                data = (EDITOR if is_editor else (AGENTS_HTML if route == "/agents" else DASHBOARD)).read_bytes()
+                data = (EDITOR if is_editor else (AGENTS_HTML if route == "/agents" else (MEDIA_HTML if route == "/media" else DASHBOARD))).read_bytes()
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Cache-Control", "no-store")
@@ -55,6 +58,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
                 return
+            if route == "/api/skills":
+                return self.reply(list_skills())
             if route == "/api/agents":
                 return self.reply(list_agents())
             if route == "/api/providers":
@@ -98,17 +103,29 @@ class Handler(BaseHTTPRequestHandler):
         if host not in (f"127.0.0.1:{PORT}", f"localhost:{PORT}") or origin not in allowed:
             return self.reply({"erro": "Origem não autorizada"}, 403)
         route = urlparse(self.path).path
-        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest", "/api/agents/register", "/api/agents/propose", "/api/agents/ask", "/api/blender/approve"):
+        if route not in ("/api/powershell/diagnose", "/api/editor/preview", "/api/editor/save", "/api/ai/suggest", "/api/agents/register", "/api/agents/propose", "/api/agents/ask", "/api/blender/approve", "/api/skills/save", "/api/media/info", "/api/media/vision"):
             return self.reply({"erro": "Rota desconhecida"}, 404)
         if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
             return self.reply({"erro": "Content-Type deve ser application/json"}, 415)
         try:
             size = int(self.headers.get("Content-Length", "0"))
-            if not 1 <= size <= (110000 if route == "/api/ai/suggest" else (550000 if route.startswith("/api/editor/") else 12000)):
+            if not 1 <= size <= (110000 if route == "/api/ai/suggest" else (550000 if route.startswith("/api/editor/") else 16000)):
                 return self.reply({"erro": "Requisição muito grande"}, 413)
             data = json.loads(self.rfile.read(size))
             if not isinstance(data, dict):
                 return self.reply({"erro": "JSON inválido"}, 400)
+            if route == "/api/skills/save":
+                return self.reply(save_skill(data))
+            if route == "/api/media/info":
+                if data.get("kind") == "image":
+                    return self.reply(image_info(data.get("path")))
+                if data.get("kind") == "model":
+                    return self.reply(model_info(data.get("path")))
+                return self.reply({"erro":"Tipo de mídia inválido"},400)
+            if route == "/api/media/vision":
+                if data.get("consent") is not True:
+                    return self.reply({"erro":"Autorização necessária"},403)
+                return self.reply(vision_ollama(data.get("path"),data.get("prompt"),data.get("model")))
             if route == "/api/agents/register":
                 return self.reply(register_agent(data))
             if route == "/api/agents/ask":
