@@ -7,3 +7,7 @@ venv/
 *.sqlite3
 .cache/
 logs/
+
+# Cadastros locais do usuário (não versionar)
+config/agents.json
+config/*.tmp
