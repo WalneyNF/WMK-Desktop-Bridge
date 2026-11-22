@@ -11,6 +11,7 @@ import urllib.error
 import urllib.request
 
 from editor_backend import _check_file
+from credential_store import get as get_credential, status as credential_status
 
 MAX_SOURCE = 30000
 MAX_PROMPT = 1800
@@ -26,7 +27,8 @@ SECRETS = [
 def ai_status() -> dict:
     """Exibe estado do Groq/Ollama, sem revelar credenciais."""
     result = {
-        "groq_configurado": bool(os.getenv("GROQ_API_KEY", "").strip()),
+        "groq_configurado": credential_status("GROQ_API_KEY")["configurada"],
+        "groq_chave_origem": credential_status("GROQ_API_KEY")["origem"],
         "groq_modelo": os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"),
         "ollama_url": "http://127.0.0.1:11434",
         "ollama_online": False, "ollama_modelos": [],
@@ -91,9 +93,9 @@ def suggest_code(payload: dict) -> dict:
         raise PermissionError("É necessário consentimento explícito para cada envio")
     if any(pattern.search(source) for pattern in SECRETS):
         raise PermissionError("Possível credencial detectada: remova segredos antes de enviar o código")
-    key = os.getenv("GROQ_API_KEY", "").strip()
+    key = get_credential("GROQ_API_KEY")
     if provider == "groq" and not key:
-        raise RuntimeError("Defina GROQ_API_KEY no ambiente do servidor antes de iniciá-lo")
+        raise RuntimeError("Groq sem chave. No Code Studio clique em Configurar chave Groq e salve-a no Windows.")
     if action == "gerar" and not instruction.strip():
         raise ValueError("Descreva o código que deseja gerar")
     system = (
@@ -187,7 +189,7 @@ def test_provider(payload: dict) -> dict:
     if provider == "groq":
         key = os.getenv("GROQ_API_KEY","").strip()
         if not key:
-            raise RuntimeError("GROQ_API_KEY ausente no processo Python. Use iniciar-com-chaves.ps1 ou configure a variável e reinicie.")
+            raise RuntimeError("Groq sem chave. Configure no próprio Code Studio, em Configurar chave Groq.")
         response = _fetch("https://api.groq.com/openai/v1/chat/completions",
             {"model":model,"messages":messages,"max_completion_tokens":256},
             {"Content-Type":"application/json","Authorization":"Bearer "+key},45)
